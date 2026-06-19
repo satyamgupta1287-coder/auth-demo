@@ -3,54 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
+    <title>Role Based Dashboard</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; }
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f7f6; }
         .hidden { display: none; }
-        .dashboard-section { border: 1px solid #ccc; padding: 20px; margin-top: 20px; border-radius: 5px; }
-        .admin-panel { background-color: #f8f9fa; }
+        .dashboard-section { background: white; padding: 20px; margin-top: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .admin-panel { border-top: 4px solid #dc3545; }
+        .teacher-panel { border-top: 4px solid #ffc107; }
+        .student-panel { border-top: 4px solid #28a745; }
+        
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
         th { background-color: #f2f2f2; }
-        input, select, button { padding: 8px; margin: 5px 0; }
-        .btn { background-color: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
+        input, select { padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; }
+        
+        .btn { padding: 8px 15px; background-color: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
+        .btn:hover { background-color: #0056b3; }
         .btn-success { background-color: #28a745; }
         .btn-danger { background-color: #dc3545; }
     </style>
 </head>
 <body>
 
-    <h2>Welcome to the Dashboard</h2>
+    <h2>🎓 System Dashboard</h2>
 
-    <div id="authSection">
+    <div id="authSection" style="margin-bottom: 20px;">
         <button id="loginBtn" class="btn" onclick="loginWithGoogle()">Login with Google</button>
         <button id="logoutBtn" class="btn btn-danger hidden" onclick="logout()">Logout</button>
-        <p id="userInfo"></p>
+        <p id="userInfo" style="font-weight: bold; color: #333;"></p>
     </div>
 
-    <div id="studentDashboard" class="dashboard-section hidden">
-        <h3>🎓 Student Dashboard</h3>
-        <p>Welcome Student! Here is your content.</p>
+    <div id="studentDashboard" class="dashboard-section student-panel hidden">
+        <h3>📗 Student Dashboard</h3>
+        <p>Welcome Student! You can view your courses and grades here.</p>
     </div>
 
-    <div id="teacherDashboard" class="dashboard-section hidden">
+    <div id="teacherDashboard" class="dashboard-section teacher-panel hidden">
         <h3>👨‍🏫 Teacher Dashboard</h3>
-        <p>Welcome Teacher! Here you can manage your classes.</p>
+        <p>Welcome Teacher! You can manage your classes and students here.</p>
     </div>
 
     <div id="adminDashboard" class="dashboard-section admin-panel hidden">
         <h3>⚙️ Admin Panel</h3>
-        <p>Welcome Admin! You have full access.</p>
+        <p>Welcome Admin! You have full control over the system.</p>
 
-        <div style="background: #fff; padding: 15px; border: 1px solid #ddd; margin-bottom: 20px;">
-            <h4>Add New User (नया यूजर जोड़ें)</h4>
-            <input type="text" id="newUserName" placeholder="User's Name" required>
-            <input type="email" id="newUserEmail" placeholder="User's Email" required>
+        <div style="background: #f9f9f9; padding: 15px; border: 1px solid #eee; margin-bottom: 20px; border-radius: 5px;">
+            <h4>Add New User</h4>
+            <input type="text" id="newUserName" placeholder="Full Name" required>
+            <input type="email" id="newUserEmail" placeholder="Email Address" required>
             <select id="newUserRole">
                 <option value="student">Student</option>
                 <option value="teacher">Teacher</option>
@@ -59,7 +64,7 @@
             <button class="btn btn-success" onclick="addNewUser()">Add User</button>
         </div>
 
-        <h4>All Users</h4>
+        <h4>All Registered Users</h4>
         <table>
             <thead>
                 <tr>
@@ -75,7 +80,7 @@
     </div>
 
     <script>
-        // तुम्हारी Firebase Configuration
+        // Your Exact Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyCqSMjr5__HNV-LXZi5vQvGzfBQ46lRFNA",
             authDomain: "auth-demo-f8ae4.firebaseapp.com",
@@ -93,30 +98,30 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-        // --- Authentication Functions ---
+        // --- Authentication ---
         function loginWithGoogle() {
             const provider = new firebase.auth.GoogleAuthProvider();
             auth.signInWithPopup(provider).catch((error) => {
                 console.error("Login failed:", error);
+                alert("Login Error: " + error.message);
             });
         }
 
         function logout() {
-            auth.signOut();
+            auth.signOut().then(() => {
+                hideAllDashboards();
+            });
         }
 
-        // --- Track User State ---
+        // --- Auth State Observer ---
         auth.onAuthStateChanged((user) => {
             if (user) {
-                // User is logged in
                 document.getElementById('loginBtn').classList.add('hidden');
                 document.getElementById('logoutBtn').classList.remove('hidden');
                 document.getElementById('userInfo').innerText = `Logged in as: ${user.email}`;
                 
-                // Check user role in Firestore
                 checkUserRole(user);
             } else {
-                // User is logged out
                 document.getElementById('loginBtn').classList.remove('hidden');
                 document.getElementById('logoutBtn').classList.add('hidden');
                 document.getElementById('userInfo').innerText = "";
@@ -124,24 +129,26 @@
             }
         });
 
-        // --- Check Role and Show Dashboard ---
+        // --- Role Checking Logic ---
         function checkUserRole(user) {
-            const userRef = db.collection('users').doc(user.email);
+            const userEmail = user.email.toLowerCase().trim(); // FIX: Ensure email is always lowercase
+            const userRef = db.collection('users').doc(userEmail);
             
             userRef.get().then((doc) => {
                 if (doc.exists) {
                     const userData = doc.data();
-                    const role = userData.role;
+                    const role = String(userData.role).toLowerCase().trim(); // FIX: Ensure role is strictly formatted
+                    
                     showDashboard(role);
                     
                     if (role === 'admin') {
-                        loadAllUsers(); // Only load users if admin
+                        loadAllUsers(); 
                     }
                 } else {
-                    // If new user, default to student
+                    // New user -> Default to Student
                     userRef.set({
-                        name: user.displayName,
-                        email: user.email,
+                        name: user.displayName || "Unknown",
+                        email: userEmail,
                         role: 'student',
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     }).then(() => {
@@ -153,6 +160,7 @@
             });
         }
 
+        // --- UI Logic ---
         function hideAllDashboards() {
             document.getElementById('studentDashboard').classList.add('hidden');
             document.getElementById('teacherDashboard').classList.add('hidden');
@@ -171,26 +179,25 @@
         }
 
         // --- Admin Functions ---
-
-        // 1. Load All Users
         function loadAllUsers() {
             db.collection('users').onSnapshot((querySnapshot) => {
                 const tableBody = document.getElementById('usersTableBody');
-                tableBody.innerHTML = ''; // Clear old data
+                tableBody.innerHTML = ''; 
 
                 querySnapshot.forEach((doc) => {
                     const user = doc.data();
                     const email = doc.id;
+                    const safeRole = String(user.role).toLowerCase().trim();
                     
                     const row = `
                         <tr>
                             <td>${user.name}</td>
-                            <td>${user.email}</td>
+                            <td>${email}</td>
                             <td>
                                 <select id="role-${email}">
-                                    <option value="student" ${user.role === 'student' ? 'selected' : ''}>Student</option>
-                                    <option value="teacher" ${user.role === 'teacher' ? 'selected' : ''}>Teacher</option>
-                                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                                    <option value="student" ${safeRole === 'student' ? 'selected' : ''}>Student</option>
+                                    <option value="teacher" ${safeRole === 'teacher' ? 'selected' : ''}>Teacher</option>
+                                    <option value="admin" ${safeRole === 'admin' ? 'selected' : ''}>Admin</option>
                                 </select>
                             </td>
                             <td>
@@ -203,22 +210,20 @@
             });
         }
 
-        // 2. Update Existing User Role
         function updateRole(email) {
             const newRole = document.getElementById(`role-${email}`).value;
             db.collection('users').doc(email).update({
                 role: newRole
             }).then(() => {
-                alert("Role updated successfully!");
+                alert("User role updated successfully!");
             }).catch((error) => {
                 console.error("Error updating role:", error);
             });
         }
 
-        // 3. Add New User Manually
         function addNewUser() {
-            const name = document.getElementById('newUserName').value;
-            const email = document.getElementById('newUserEmail').value;
+            const name = document.getElementById('newUserName').value.trim();
+            const email = document.getElementById('newUserEmail').value.toLowerCase().trim(); // FIX: Lowercase email
             const role = document.getElementById('newUserRole').value;
 
             if (name === "" || email === "") {
@@ -236,15 +241,12 @@
                 alert("New user added successfully!");
                 document.getElementById('newUserName').value = '';
                 document.getElementById('newUserEmail').value = '';
-                // List will update automatically because we used onSnapshot in loadAllUsers()
             })
             .catch((error) => {
                 console.error("Error adding user: ", error);
-                alert("Error adding user. Check console.");
+                alert("Failed to add user. Check console.");
             });
         }
     </script>
 </body>
 </html>
-
-        
