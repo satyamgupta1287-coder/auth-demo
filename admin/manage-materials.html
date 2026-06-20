@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Study Materials</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 p-4 font-sans pb-24">
+
+<div class="max-w-md mx-auto">
+    <div class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm mb-4">
+        <button onclick="window.location.href='admin.html'" class="text-gray-500 hover:text-indigo-600 transition">
+            <i class="fas fa-arrow-left text-xl"></i>
+        </button>
+        <h1 class="text-xl font-bold text-gray-800">Study Materials</h1>
+        <div></div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm p-6 mb-6 border-t-4 border-indigo-500">
+        <h2 class="text-sm font-bold text-gray-400 uppercase mb-4"><i class="fas fa-file-upload text-indigo-500 mr-2"></i>Upload Material</h2>
+        <form id="materialForm" class="space-y-4" onsubmit="return false;">
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Target Class *</label>
+                    <select id="targetClass" required class="w-full p-3 border border-gray-200 rounded-xl outline-none bg-gray-50 focus:ring-2 focus:ring-indigo-500">
+                        <option value="">Select...</option>
+                        <option value="1">Class 1</option>
+                        <option value="2">Class 2</option>
+                        <option value="3">Class 3</option>
+                        <option value="4">Class 4</option>
+                        <option value="5">Class 5</option>
+                        <option value="6">Class 6</option>
+                        <option value="7">Class 7</option>
+                        <option value="8">Class 8</option>
+                        <option value="9">Class 9</option>
+                        <option value="10">Class 10</option>
+                        <option value="11">Class 11</option>
+                        <option value="12">Class 12</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Material Type *</label>
+                    <select id="type" required class="w-full p-3 border border-gray-200 rounded-xl outline-none bg-gray-50 focus:ring-2 focus:ring-indigo-500">
+                        <option value="book">Book (PDF)</option>
+                        <option value="notes">Notes</option>
+                        <option value="pyq">Prev. Year (PYQ)</option>
+                        <option value="model">Model Paper</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Subject *</label>
+                    <input type="text" id="subject" required placeholder="e.g. Science" class="w-full p-3 border border-gray-200 rounded-xl outline-none bg-gray-50 focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Year (For PYQ)</label>
+                    <input type="text" id="year" placeholder="e.g. 2025" class="w-full p-3 border border-gray-200 rounded-xl outline-none bg-gray-50 focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1">Document Title *</label>
+                <input type="text" id="title" required placeholder="e.g. Chapter 1: Physics" class="w-full p-3 border border-gray-200 rounded-xl outline-none bg-gray-50 focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1">Select File (PDF) *</label>
+                <input type="file" id="file" accept=".pdf,.doc,.docx" required class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
+            </div>
+
+            <div id="progressContainer" class="hidden">
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div id="progressBar" class="bg-indigo-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <p id="progressText" class="text-xs text-gray-500 text-center mt-1">Uploading: 0%</p>
+            </div>
+
+            <button type="submit" id="uploadBtn" class="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 shadow-md transition flex justify-center items-center">
+                <i class="fas fa-cloud-upload-alt mr-2"></i> Upload Material
+            </button>
+        </form>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm p-6">
+        <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Uploaded Materials</h2>
+        <div id="materialsList" class="space-y-3">
+            <p class="text-center text-sm text-gray-400 py-4">Loading...</p>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { auth, db } from '../js/firebase-init.js';
+    import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-storage.js";
+    import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+    const storage = getStorage();
+    const form = document.getElementById('materialForm');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+
+    // --- UPLOAD LOGIC ---
+    form.addEventListener('submit', async () => {
+        const targetClass = document.getElementById('targetClass').value;
+        const type = document.getElementById('type').value;
+        const subject = document.getElementById('subject').value;
+        const year = document.getElementById('year').value || 'N/A';
+        const title = document.getElementById('title').value;
+        const file = document.getElementById('file').files[0];
+
+        if (!file) return alert("Please select a file!");
+
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Uploading...';
+        progressContainer.classList.remove('hidden');
+
+        const filePath = `materials/${Date.now()}_${file.name}`;
+        const fileRef = ref(storage, filePath);
+        const uploadTask = uploadBytesResumable(fileRef, file);
+
+        uploadTask.on('state_changed', 
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                progressBar.style.width = progress + '%';
+                progressText.innerText = `Uploading: ${Math.round(progress)}%`;
+            }, 
+            (error) => {
+                alert("Upload failed: " + error.message);
+                resetForm();
+            }, 
+            async () => {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                try {
+                    await addDoc(collection(db, "study_materials"), {
+                        title, subject, targetClass, type, year,
+                        fileUrl: downloadURL, storagePath: filePath,
+                        createdAt: serverTimestamp()
+                    });
+                    alert("Material Uploaded Successfully!");
+                    form.reset();
+                    resetForm();
+                } catch (err) {
+                    alert("Error saving: " + err.message);
+                    resetForm();
+                }
+            }
+        );
+    });
+
+    function resetForm() {
+        uploadBtn.disabled = false;
+        uploadBtn.innerHTML = '<i class="fas fa-cloud-upload-alt mr-2"></i> Upload Material';
+        progressContainer.classList.add('hidden');
+        progressBar.style.width = '0%';
+    }
+
+    // --- DISPLAY LOGIC ---
+    const q = query(collection(db, "study_materials"), orderBy("createdAt", "desc"));
+    onSnapshot(q, (snapshot) => {
+        const list = document.getElementById('materialsList');
+        list.innerHTML = "";
+        
+        if (snapshot.empty) {
+            list.innerHTML = `<p class="text-center text-sm text-gray-400 py-4">No materials uploaded yet.</p>`;
+            return;
+        }
+
+        snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            list.innerHTML += `
+                <div class="p-3 border rounded-xl bg-gray-50 flex justify-between items-center">
+                    <div>
+                        <span class="text-[9px] font-bold px-2 py-0.5 rounded uppercase bg-indigo-100 text-indigo-600 mb-1 inline-block">Class ${data.targetClass} • ${data.type}</span>
+                        <h4 class="font-bold text-gray-800 text-sm line-clamp-1">${data.title}</h4>
+                        <p class="text-[11px] text-gray-500 mt-0.5">${data.subject}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <a href="${data.fileUrl}" target="_blank" class="bg-white text-indigo-500 p-2 rounded-lg text-xs font-bold border border-gray-200 hover:bg-indigo-50 transition shadow-sm"><i class="fas fa-download"></i></a>
+                        <button onclick="deleteMaterial('${docSnap.id}', '${data.storagePath}')" class="bg-white text-red-500 p-2 rounded-lg text-xs font-bold border border-gray-200 hover:bg-red-50 transition shadow-sm"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            `;
+        });
+    });
+
+    // --- DELETE LOGIC ---
+    window.deleteMaterial = async (id, storagePath) => {
+        if(confirm("Delete this material?")) {
+            await deleteDoc(doc(db, "study_materials", id));
+            if(storagePath) {
+                const fileRef = ref(storage, storagePath);
+                await deleteObject(fileRef);
+            }
+        }
+    };
+</script>
+</body>
+</html>
