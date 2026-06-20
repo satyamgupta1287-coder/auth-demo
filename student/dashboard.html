@@ -38,11 +38,12 @@
 
     <div class="mt-14 px-4">
         <div class="flex gap-3 overflow-x-auto no-scrollbar py-2">
-            <div class="min-w-[120px] bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center">
+            <div onclick="window.location.href='attendance.html'" class="min-w-[120px] bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition-all">
                 <i class="fas fa-chart-pie text-blue-500 text-2xl mb-2"></i>
                 <h3 class="text-lg font-bold text-gray-800" id="statAttendance">N/A</h3>
                 <p class="text-[10px] text-gray-500 font-bold uppercase">Attendance</p>
             </div>
+            
             <div class="min-w-[120px] bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center">
                 <i class="fas fa-tasks text-orange-500 text-2xl mb-2"></i>
                 <h3 class="text-lg font-bold text-gray-800" id="statAssignments">0</h3>
@@ -144,7 +145,8 @@
 
 <script type="module">
     import { auth, db } from '../js/firebase-init.js';
-    import { doc, getDoc, collection, query, onSnapshot, orderBy, limit } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    // IMPORTANT: 'where' is added to imports here
+    import { doc, getDoc, collection, query, where, onSnapshot, orderBy, limit } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
     import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
     const hour = new Date().getHours();
@@ -235,7 +237,7 @@
                 onSnapshot(noticeQuery, (snapshot) => {
                     const noticeContainer = document.getElementById('announcementContainer');
                     if(!snapshot.empty) {
-                        const data = snapshot.docs[0].data();
+                        const data = snapshot.docs.data();
                         noticeContainer.innerHTML = `
                             <div class="bg-yellow-50 p-4 rounded-2xl border border-yellow-200 flex items-start gap-3">
                                 <div class="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 flex-shrink-0"><i class="fas fa-bullhorn"></i></div>
@@ -245,6 +247,33 @@
                                 </div>
                             </div>
                         `;
+                    }
+                });
+
+                // D. NAYA LOGIC: Attendance Percentage Load for Dashboard
+                const attQuery = query(collection(db, "attendance"), where("studentEmail", "==", user.email));
+                onSnapshot(attQuery, (snapshot) => {
+                    let presentCount = 0;
+                    let totalCount = snapshot.docs.length;
+                    
+                    snapshot.forEach(doc => {
+                        if(doc.data().status === 'present') presentCount++;
+                    });
+                    
+                    let percentage = totalCount === 0 ? "N/A" : Math.round((presentCount / totalCount) * 100) + "%";
+                    
+                    const statEl = document.getElementById('statAttendance');
+                    statEl.innerText = percentage;
+                    
+                    // Color styling based on percentage
+                    if(percentage !== "N/A") {
+                        if(parseInt(percentage) >= 75) {
+                            statEl.className = "text-lg font-black text-green-600";
+                        } else if(parseInt(percentage) < 50) {
+                            statEl.className = "text-lg font-black text-red-600";
+                        } else {
+                            statEl.className = "text-lg font-black text-blue-600";
+                        }
                     }
                 });
 
@@ -265,3 +294,6 @@
 </script>
 </body>
 </html>
+
+
+    
