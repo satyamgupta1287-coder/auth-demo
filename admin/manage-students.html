@@ -192,13 +192,12 @@
     };
 
     window.generateAutoIDs = () => {
-        if(currentEditId) return; // Don't generate if editing
+        if(currentEditId) return; 
         const yr = new Date().getFullYear();
         const rnd = Math.floor(1000 + Math.random() * 9000);
         document.getElementById('stuId').value = "STU" + yr + rnd;
         document.getElementById('admNo').value = "ADM" + yr + (rnd + 1);
         
-        // Auto set today for admission date
         if(!document.getElementById('admDate').value){
             document.getElementById('admDate').value = new Date().toISOString().split('T')[0];
         }
@@ -214,7 +213,6 @@
         generateAutoIDs();
     };
 
-    // Auto-run on load
     generateAutoIDs();
 
     // --- Cloudinary Upload ---
@@ -235,7 +233,6 @@
         const btn = document.getElementById('saveBtn');
         btn.innerText = "Saving..."; btn.disabled = true;
 
-        // Gather all 35+ fields
         const studentData = {
             studentId: document.getElementById('stuId').value,
             admissionNo: document.getElementById('admNo').value,
@@ -243,7 +240,7 @@
             firstName: document.getElementById('fName').value,
             middleName: document.getElementById('mName').value,
             lastName: document.getElementById('lName').value,
-            name: document.getElementById('fullName').value, // Used across app
+            name: document.getElementById('fullName').value, 
             dob: document.getElementById('dob').value,
             gender: document.getElementById('gender').value,
             bloodGroup: document.getElementById('bloodGrp').value,
@@ -261,7 +258,7 @@
             country: document.getElementById('country').value,
             admissionDate: document.getElementById('admDate').value,
             session: document.getElementById('session').value,
-            class: document.getElementById('className').value, // Used across app
+            class: document.getElementById('className').value, 
             section: document.getElementById('section').value,
             rollNo: document.getElementById('rollNo').value,
             tcNo: document.getElementById('tcNo').value,
@@ -280,11 +277,13 @@
 
         try {
             if(currentEditId) {
-                await updateDoc(doc(db, "students_registry", currentEditId), studentData);
+                // Update in 'users' collection
+                await updateDoc(doc(db, "users", currentEditId), studentData);
                 alert("Student Record Updated!");
             } else {
                 studentData.createdAt = serverTimestamp();
-                await addDoc(collection(db, "students_registry"), studentData);
+                // Save to 'users' collection
+                await addDoc(collection(db, "users"), studentData);
                 alert("New Student Registered Successfully!");
             }
             resetForm();
@@ -303,7 +302,8 @@
         container.innerHTML = `<p class="text-center text-blue-500 py-10 font-bold"><i class="fas fa-spinner fa-spin mr-2"></i>Fetching records...</p>`;
         
         try {
-            const querySnapshot = await getDocs(collection(db, "students_registry"));
+            // Fetch from 'users' collection
+            const querySnapshot = await getDocs(collection(db, "users"));
             container.innerHTML = "";
             
             if(querySnapshot.empty) {
@@ -315,16 +315,15 @@
                 const data = docSnap.data();
                 const docId = docSnap.id;
                 
-                // Safe JSON string for editing
                 const dataStr = encodeURIComponent(JSON.stringify({...data, id: docId}));
 
                 container.innerHTML += `
                     <div class="bg-gray-50 border border-gray-200 p-4 rounded-xl flex justify-between items-center hover:shadow-md transition">
                         <div class="flex items-center gap-4">
-                            <img src="${data.photoUrl || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}" class="w-12 h-12 rounded-full object-cover border border-gray-300">
+                            <img src="${data.photoUrl || data.photoBase64 || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}" class="w-12 h-12 rounded-full object-cover border border-gray-300">
                             <div>
-                                <h3 class="font-bold text-gray-800">${data.name} <span class="text-xs text-blue-600 bg-blue-100 px-2 py-0.5 rounded ml-1">Class ${data.class} ${data.section||''}</span></h3>
-                                <p class="text-xs text-gray-500 mt-0.5">ID: ${data.studentId} | Mob: ${data.mobile}</p>
+                                <h3 class="font-bold text-gray-800">${data.name || data.firstName || 'Student'} <span class="text-xs text-blue-600 bg-blue-100 px-2 py-0.5 rounded ml-1">Class ${data.class || 'N/A'} ${data.section||''}</span></h3>
+                                <p class="text-xs text-gray-500 mt-0.5">ID: ${data.studentId || 'N/A'} | Mob: ${data.mobile || 'N/A'}</p>
                             </div>
                         </div>
                         <div class="flex flex-col gap-2">
@@ -347,10 +346,8 @@
         document.getElementById('formTitle').innerText = "Edit Student Record";
         document.getElementById('saveBtn').innerHTML = `<i class="fas fa-save mr-2"></i> Update Record`;
 
-        // Map values to form
         Object.keys(data).forEach(key => {
             const el = document.getElementById(key);
-            // Mapping specific IDs that don't exactly match keys
             if(key === 'studentId') document.getElementById('stuId').value = data[key] || '';
             if(key === 'admissionNo') document.getElementById('admNo').value = data[key] || '';
             if(key === 'firstName') document.getElementById('fName').value = data[key] || '';
@@ -359,13 +356,11 @@
             if(key === 'class') document.getElementById('className').value = data[key] || '';
             if(key === 'name') document.getElementById('fullName').value = data[key] || '';
             if(key === 'fatherName') document.getElementById('fathName').value = data[key] || '';
-            // Rest direct match
             if(el) el.value = data[key] || '';
         });
 
-        // Handle Photo
-        if(data.photoUrl) {
-            document.getElementById('photoPreview').src = data.photoUrl;
+        if(data.photoUrl || data.photoBase64) {
+            document.getElementById('photoPreview').src = data.photoUrl || data.photoBase64;
             document.getElementById('photoPreviewBox').classList.remove('hidden');
         } else {
             document.getElementById('photoPreviewBox').classList.add('hidden');
@@ -379,7 +374,7 @@
     window.deleteStudent = async (id) => {
         if(confirm("Are you absolutely sure you want to delete this record?")) {
             try {
-                await deleteDoc(doc(db, "students_registry", id));
+                await deleteDoc(doc(db, "users", id));
                 alert("Student deleted successfully!");
                 loadStudents();
             } catch (error) {
