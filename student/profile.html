@@ -21,7 +21,8 @@
                     <i class="fas fa-arrow-left"></i>
                 </button>
                 <h1 class="text-xl font-bold tracking-wide">My Profile</h1>
-                <div class="w-9 h-9"></div> </div>
+                <div class="w-9 h-9"></div> 
+            </div>
             
             <div class="absolute -bottom-12 w-24 h-24 bg-white rounded-full p-1 shadow-md border border-gray-100">
                 <div class="w-full h-full bg-blue-50 rounded-full flex items-center justify-center overflow-hidden">
@@ -31,12 +32,11 @@
         </div>
 
         <div class="mt-16 text-center px-4">
-            <h2 id="profileName" class="text-2xl font-black text-gray-800 truncate">Loading...</h2>
-            <p id="profileRoll" class="text-sm text-gray-500 font-medium mt-0.5">ID: Fetching...</p>
+            <h2 id="profileName" class="text-2xl font-black text-gray-800 truncate">Syncing Data...</h2>
+            <p id="profileRoll" class="text-sm text-gray-500 font-medium mt-0.5">Please wait...</p>
         </div>
 
         <div class="px-4 mt-8 space-y-5">
-            
             <div>
                 <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider px-1 mb-2">Academic Details</h3>
                 <div class="space-y-3">
@@ -160,65 +160,98 @@
 
 <script type="module">
     import { auth, db } from '../js/firebase-init.js';
-    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
     import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+
+    // Function to display data on UI
+    function updateUI(data) {
+        if(data.photoUrl || data.photoBase64) {
+            document.getElementById('userAvatar').src = data.photoUrl || data.photoBase64;
+        }
+
+        document.getElementById('profileName').innerText = data.name || data.firstName || 'Student';
+        document.getElementById('profileRoll').innerText = "ID: " + (data.studentId || data.admissionNo || 'N/A');
+        
+        document.getElementById('profileAdmissionNo').innerText = data.admissionNo || data.studentId || 'N/A';
+        let stuClass = data.class ? `Class ${data.class}` : 'Unassigned';
+        let stuSec = data.section ? ` - ${data.section}` : '';
+        document.getElementById('profileClass').innerText = stuClass + stuSec;
+
+        document.getElementById('profileDob').innerText = data.dob || 'N/A';
+        document.getElementById('profileGender').innerText = data.gender || 'N/A';
+        document.getElementById('profileBlood').innerText = data.bloodGroup || 'N/A';
+
+        document.getElementById('profileMobile').innerText = data.mobile || 'N/A';
+        document.getElementById('profileEmail').innerText = data.email || 'N/A';
+        
+        let addressText = "N/A";
+        if(data.currAddress) {
+            addressText = data.currAddress;
+            if(data.city) addressText += `, ${data.city}`;
+            if(data.state) addressText += `, ${data.state}`;
+        }
+        document.getElementById('profileAddress').innerText = addressText;
+
+        document.getElementById('profileFather').innerText = data.fatherName || 'N/A';
+        document.getElementById('profileMother').innerText = data.motherName || 'N/A';
+
+        const totalFee = data.totalFee || 0;
+        const paidFee = data.paidFee || 0;
+        const pendingFee = totalFee - paidFee;
+
+        document.getElementById('feeTotal').innerText = "₹" + totalFee;
+        document.getElementById('feePaid').innerText = "₹" + paidFee;
+        document.getElementById('feePending').innerText = "₹" + pendingFee;
+    }
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             try {
-                const userDoc = await getDoc(doc(db, "users", user.uid));
-                if (userDoc.exists()) {
-                    const data = userDoc.data();
+                // Step 1: Check if user already has data linked to their Auth UID
+                const userDocRef = doc(db, "users", user.uid);
+                const userDoc = await getDoc(userDocRef);
 
-                    // Avatar
-                    if(data.photoUrl || data.photoBase64) {
-                        document.getElementById('userAvatar').src = data.photoUrl || data.photoBase64;
-                    }
-
-                    // Basic Header
-                    document.getElementById('profileName').innerText = data.name || data.firstName || 'Student';
-                    document.getElementById('profileRoll').innerText = "ID: " + (data.studentId || data.admissionNo || 'N/A');
-                    
-                    // Academic
-                    document.getElementById('profileAdmissionNo').innerText = data.admissionNo || data.studentId || 'N/A';
-                    let stuClass = data.class ? `Class ${data.class}` : 'Unassigned';
-                    let stuSec = data.section ? ` - ${data.section}` : '';
-                    document.getElementById('profileClass').innerText = stuClass + stuSec;
-
-                    // Personal
-                    document.getElementById('profileDob').innerText = data.dob || 'N/A';
-                    document.getElementById('profileGender').innerText = data.gender || 'N/A';
-                    document.getElementById('profileBlood').innerText = data.bloodGroup || 'N/A';
-
-                    // Contact
-                    document.getElementById('profileMobile').innerText = data.mobile || 'N/A';
-                    document.getElementById('profileEmail').innerText = data.email || 'N/A';
-                    let addressText = "N/A";
-                    if(data.currAddress) {
-                        addressText = data.currAddress;
-                        if(data.city) addressText += `, ${data.city}`;
-                        if(data.state) addressText += `, ${data.state}`;
-                    }
-                    document.getElementById('profileAddress').innerText = addressText;
-
-                    // Parents
-                    document.getElementById('profileFather').innerText = data.fatherName || 'N/A';
-                    document.getElementById('profileMother').innerText = data.motherName || 'N/A';
-
-                    // Fees 
-                    const totalFee = data.totalFee || 0;
-                    const paidFee = data.paidFee || 0;
-                    const pendingFee = totalFee - paidFee;
-
-                    document.getElementById('feeTotal').innerText = "₹" + totalFee;
-                    document.getElementById('feePaid').innerText = "₹" + paidFee;
-                    document.getElementById('feePending').innerText = "₹" + pendingFee;
-
+                if (userDoc.exists() && userDoc.data().class) {
+                    // Data pehle se sahi linked hai
+                    updateUI(userDoc.data());
                 } else {
-                    alert("Profile data not found!");
+                    // Step 2: Agar linked data nahi hai (Naya signup ya unassigned), toh Admin wala data dhoondho by Email
+                    const q = query(collection(db, "users"), where("email", "==", user.email));
+                    const querySnapshot = await getDocs(q);
+
+                    let adminDataFound = false;
+                    let oldDocId = null;
+                    let fullData = { email: user.email }; // Basic data
+
+                    querySnapshot.forEach((docSnap) => {
+                        // Admin ka banaya random ID wala document mil gaya jo current user ke UID se match NAHI karta
+                        if(docSnap.id !== user.uid) {
+                            adminDataFound = true;
+                            fullData = { ...docSnap.data(), ...fullData }; // Merge data
+                            oldDocId = docSnap.id; 
+                        }
+                    });
+
+                    if (adminDataFound) {
+                        // Step 3: Admin wala data User ke asli UID me copy kar do
+                        await setDoc(userDocRef, fullData, { merge: true });
+                        updateUI(fullData);
+                        
+                        // Optional: Purana wala duplicate document delete kar do safai ke liye
+                        if(oldDocId) {
+                            await deleteDoc(doc(db, "users", oldDocId));
+                        }
+                    } else if (userDoc.exists()) {
+                         // Data exist karta hai bas class assignment baaki hai
+                         updateUI(userDoc.data());
+                    } else {
+                        // Bilkul naya user, bas email hai
+                        updateUI({ email: user.email });
+                    }
                 }
             } catch (error) {
-                console.error("Error: ", error);
+                console.error("Error fetching/syncing profile: ", error);
+                alert("Error loading profile details.");
             }
         } else {
             window.location.href = "../index.html";
