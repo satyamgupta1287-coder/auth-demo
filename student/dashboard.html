@@ -1,1 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-4">
 
+<div class="max-w-md mx-auto bg-white rounded-2xl shadow-sm p-6">
+    <h1 class="text-2xl font-bold text-gray-800" id="studentName">Hello Student!</h1>
+    <p class="text-gray-500 mb-6">Your Class: <span id="studentClassSection" class="font-bold">Loading...</span></p>
+
+    <div class="grid grid-cols-2 gap-4">
+        <div class="bg-blue-50 p-4 rounded-xl text-center">
+            <h3 class="text-sm font-bold text-blue-600">Assignments</h3>
+            <p id="assignCount" class="text-xl font-bold">0</p>
+        </div>
+        <div class="bg-green-50 p-4 rounded-xl text-center">
+            <h3 class="text-sm font-bold text-green-600">Results</h3>
+            <p id="resultCount" class="text-xl font-bold">0</p>
+        </div>
+    </div>
+
+    <div class="mt-8">
+        <h2 class="font-bold text-gray-800 mb-4">Your Assignments</h2>
+        <div id="assignmentList" class="space-y-3">
+            </div>
+    </div>
+</div>
+
+<script type="module">
+    import { auth, db } from '../js/firebase-init.js';
+    import { doc, getDoc, collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            // 1. स्टूडेंट की प्रोफाइल डिटेल निकालें (Class & Section)
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            const userData = userDoc.data();
+            
+            document.getElementById('studentName').innerText = `Hello, ${userData.name}`;
+            document.getElementById('studentClassSection').innerText = `Class ${userData.class}-${userData.section}`;
+
+            // 2. सिर्फ उसी क्लास के असाइनमेंट लोड करें (Filtered Query)
+            const q = query(collection(db, "assignments"), where("targetClass", "==", userData.class));
+            
+            onSnapshot(q, (snapshot) => {
+                const list = document.getElementById('assignmentList');
+                list.innerHTML = "";
+                document.getElementById('assignCount').innerText = snapshot.size;
+
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    list.innerHTML += `
+                        <div class="p-4 border rounded-xl bg-white shadow-sm">
+                            <h4 class="font-bold text-gray-800">${data.title}</h4>
+                            <p class="text-sm text-gray-600">${data.description}</p>
+                        </div>
+                    `;
+                });
+            });
+        } else {
+            window.location.href = "../index.html";
+        }
+    });
+</script>
+</body>
+</html>

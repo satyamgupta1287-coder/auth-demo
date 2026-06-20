@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit Complaint</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 p-4">
+
+<div class="max-w-md mx-auto bg-white rounded-2xl shadow-sm p-6">
+    <h2 class="text-xl font-bold text-gray-800 mb-6">Submit Complaint</h2>
+    <div class="space-y-4">
+        <input type="text" id="compTitle" placeholder="Subject" class="w-full p-3 border rounded-xl outline-none">
+        <textarea id="compDesc" placeholder="Write your concern here..." class="w-full p-3 border rounded-xl outline-none h-32"></textarea>
+        
+        <button id="sendCompBtn" class="w-full bg-red-600 text-white font-bold py-3 rounded-xl hover:bg-red-700 transition">
+            Send to Admin
+        </button>
+    </div>
+</div>
+
+<script type="module">
+    import { auth, db } from '../js/firebase-init.js';
+    import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+    document.getElementById('sendCompBtn').addEventListener('click', async () => {
+        const title = document.getElementById('compTitle').value;
+        const desc = document.getElementById('compDesc').value;
+        const user = auth.currentUser;
+
+        if(!title || !desc) return alert("Please fill all details");
+
+        await addDoc(collection(db, "complaints"), {
+            title, desc, 
+            studentName: user.email, 
+            status: "pending", 
+            createdAt: serverTimestamp()
+        });
+        alert("Complaint Submitted Successfully!");
+        window.location.reload();
+    });
+</script>
+</body>
+</html>
