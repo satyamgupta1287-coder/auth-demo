@@ -122,7 +122,7 @@
     function loadTests() {
         const targetClassStr = String(currentUserData.class || "");
         
-        // Fetching from 'mock_tests' collection (Ya agar aap 'tests' use karte hain toh naam change kar lena)
+        // Fetching from 'tests' collection
         const testsQuery = query(collection(db, "tests"), orderBy("createdAt", "desc"));
         
         onSnapshot(testsQuery, (snapshot) => {
@@ -184,7 +184,7 @@
                             <h3 class="font-bold text-gray-800 text-lg pr-16">${test.title || 'Mock Test'}</h3>
                             <p class="text-xs text-gray-500 mt-0.5"><i class="fas fa-book mr-1"></i>${test.subject || 'General'} | Max Marks: ${test.totalMarks || '100'}</p>
                             
-                            <button onclick="startTest('${testId}', '${test.testLink || '#'}')" class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-md transition flex items-center justify-center gap-2 text-sm">
+                            <button onclick="startTest('${testId}')" class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-md transition flex items-center justify-center gap-2 text-sm">
                                 <i class="fas fa-play"></i> Start Test Now
                             </button>
                         </div>
@@ -212,16 +212,12 @@
         });
     }
 
-    // Function to handle Start Test Button
-    window.startTest = (testId, link) => {
-        // Agar aapke paas koi custom test page hai, toh use yahan link karein
-        // Example: window.location.href = `take-test.html?id=${testId}`;
-        if(link && link !== '#') {
-            window.open(link, '_blank');
-        } else {
-            alert("Test link not configured yet by admin!");
-        }
+    // UPDATED FUNCTION: Directs to internal app test page
+    window.startTest = (testId) => {
+        // 'manage-tests.html' ki jagah us page ka naam dalna jahan test show hota hai
+        window.location.href = `manage-tests.html?testId=${testId}`;
     };
 </script>
 </body>
 </html>
+                             
