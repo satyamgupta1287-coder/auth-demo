@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Classes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 pb-6 font-sans">
+
+<div class="max-w-md mx-auto min-h-screen bg-gray-50">
+
+    <div class="bg-red-500 text-white p-4 rounded-b-3xl shadow-md sticky top-0 z-50">
+        <div class="flex justify-between items-center">
+            <button onclick="window.location.href='dashboard.html'" class="hover:bg-white/20 p-2 rounded-xl transition">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <h1 class="text-lg font-bold">Live Classes</h1>
+            <div class="w-8"></div>
+        </div>
+    </div>
+
+    <div class="px-4 mt-4 flex justify-between items-center">
+        <p class="text-xs text-gray-500 font-bold uppercase">Showing classes for:</p>
+        <span id="displayClass" class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-1 rounded">Class ...</span>
+    </div>
+
+    <div class="px-4 mt-3" id="classesContainer">
+        <div class="text-center py-10">
+            <i class="fas fa-spinner fa-spin text-3xl text-red-500 mb-2"></i>
+            <p class="text-sm text-gray-500">Loading live classes...</p>
+        </div>
+    </div>
+
+</div>
+
+<script type="module">
+    import { auth, db } from '../js/firebase-init.js';
+    import { doc, getDoc, collection, query, where, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+
+    let currentClass = "";
+
+    // 1. Auth aur Class Check karein
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            if (userDoc.exists()) {
+                currentClass = userDoc.data().class;
+
+                if (!currentClass) {
+                    document.getElementById('classesContainer').innerHTML = `
+                        <div class="bg-red-50 p-4 rounded-2xl border border-red-100 text-center mt-4">
+                            <i class="fas fa-exclamation-triangle text-red-500 text-2xl mb-2"></i>
+                            <p class="text-sm text-red-600 font-bold">Class not assigned!</p>
+                            <p class="text-xs text-gray-500 mt-1">Please ask admin to update your class profile.</p>
+                        </div>`;
+                    return;
+                }
+
+                document.getElementById('displayClass').innerText = `Class ${currentClass}`;
+                fetchClasses();
+            } else {
+                window.location.href = "../index.html";
+            }
+        } else {
+            window.location.href = "../index.html";
+        }
+    });
+
+    // 2. Database se Live Classes lana (Sirf currentClass ka)
+    function fetchClasses() {
+        const q = query(collection(db, "live_classes"), where("targetClass", "==", currentClass), orderBy("createdAt", "desc"));
+
+        onSnapshot(q, (snapshot) => {
+            const container = document.getElementById('classesContainer');
+
+            if (snapshot.empty) {
+                container.innerHTML = `
+                    <div class="bg-white p-6 rounded-2xl border border-gray-100 text-center mt-4">
+                        <i class="fas fa-video-slash text-gray-300 text-4xl mb-3"></i>
+                        <p class="text-sm font-bold text-gray-600">No live classes scheduled.</p>
+                        <p class="text-xs text-gray-400 mt-1">Check back later for Class ${currentClass}.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = "";
+            snapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                container.innerHTML += `
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-3 flex items-center gap-4 text-left">
+                        <div class="w-12 h-12 bg-red-50 text-red-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-inner">
+                            <i class="fas fa-video text-xl"></i>
+                        </div>
+                        <div class="flex-grow">
+                            <h4 class="font-bold text-gray-800 text-sm">${data.subject}</h4>
+                            <p class="text-[10px] text-gray-500 font-bold mb-1"><i class="far fa-user text-gray-400 mr-1"></i>${data.teacherName}</p>
+                            <span class="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded"><i class="far fa-clock mr-1"></i>${data.time}</span>
+                        </div>
+                        <a href="${data.meetingLink}" target="_blank" class="bg-red-500 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-md hover:bg-red-600 transition flex-shrink-0">
+                            <i class="fas fa-play ml-0.5"></i>
+                        </a>
+                    </div>
+                `;
+            });
+        });
+    }
+</script>
+</body>
+</html>
