@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Assignment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 p-4">
+
+<div class="max-w-md mx-auto bg-white rounded-2xl shadow-sm p-6">
+    <h2 class="text-xl font-bold text-gray-800 mb-6">Create Assignment</h2>
+    
+    <div class="space-y-4">
+        <input type="text" id="assignTitle" placeholder="Assignment Title" class="w-full p-3 border border-gray-200 rounded-xl outline-none">
+        
+        <select id="targetClass" class="w-full p-3 border border-gray-200 rounded-xl outline-none">
+            <option value="">Select Target Class</option>
+            <option value="9">Class 9</option>
+            <option value="10">Class 10</option>
+            <option value="11">Class 11</option>
+            <option value="12">Class 12</option>
+        </select>
+
+        <textarea id="assignDesc" placeholder="Description / Instructions" class="w-full p-3 border border-gray-200 rounded-xl outline-none h-32"></textarea>
+
+        <button id="uploadBtn" class="w-full bg-purple-600 text-white font-bold py-3 rounded-xl hover:bg-purple-700 transition">
+            Publish Assignment
+        </button>
+    </div>
+</div>
+
+<script type="module">
+    import { db } from '../js/firebase-init.js';
+    import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+    document.getElementById('uploadBtn').addEventListener('click', async () => {
+        const title = document.getElementById('assignTitle').value;
+        const targetClass = document.getElementById('targetClass').value;
+        const description = document.getElementById('assignDesc').value;
+
+        if(!title || !targetClass) { alert("Title and Class are required!"); return; }
+
+        try {
+            await addDoc(collection(db, "assignments"), {
+                title: title,
+                targetClass: targetClass, // यह क्लास-वाइज फिल्टरिंग के लिए काम आएगा
+                description: description,
+                createdAt: serverTimestamp()
+            });
+            alert("Assignment Published!");
+            window.location.reload();
+        } catch (error) {
+            alert("Error: " + error.message);
+        }
+    });
+</script>
+</body>
+</html>

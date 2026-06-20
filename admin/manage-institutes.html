@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Institutes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 p-4">
+
+<div class="max-w-md mx-auto bg-white rounded-2xl shadow-sm p-6">
+    <h2 class="text-xl font-bold text-gray-800 mb-6">Institute Details</h2>
+    <div class="space-y-4">
+        <input type="text" id="instName" placeholder="Institute Name" class="w-full p-3 border rounded-xl outline-none">
+        <input type="text" id="instCode" placeholder="Institute Code" class="w-full p-3 border rounded-xl outline-none">
+        
+        <button id="saveInstBtn" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 transition">
+            Update Details
+        </button>
+    </div>
+</div>
+
+<script type="module">
+    import { db } from '../js/firebase-init.js';
+    import { doc, setDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+    document.getElementById('saveInstBtn').addEventListener('click', async () => {
+        const name = document.getElementById('instName').value;
+        const code = document.getElementById('instCode').value;
+
+        await setDoc(doc(db, "settings", "institute"), { name, code });
+        alert("Institute Details Updated!");
+    });
+</script>
+</body>
+</html>
