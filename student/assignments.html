@@ -6,114 +6,154 @@
     <title>Student - Assignments</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
     <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .skeleton { animation: pulse 1.5s infinite; background: #e5e7eb; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen font-sans pb-20">
 
-    <header class="bg-gradient-to-r from-green-600 to-teal-600 p-6 text-white shadow-md rounded-b-[2.5rem] relative mb-6">
-        <div class="flex items-center gap-4">
-            <button onclick="window.location.href='dashboard.html'" class="bg-white/20 hover:bg-white/30 p-2 rounded-xl backdrop-blur-sm transition">
-                <i class="fas fa-arrow-left"></i>
-            </button>
-            <div>
-                <h1 class="text-2xl font-bold">My Assignments</h1>
-                <p class="text-xs text-green-100 mt-0.5">Complete your pending tasks</p>
-            </div>
+    <header class="bg-gradient-to-r from-green-600 to-teal-600 p-6 text-white shadow-md rounded-b-[2.5rem] mb-6 flex items-center gap-4 relative">
+        <button onclick="window.location.href='dashboard.html'" class="bg-white/20 hover:bg-white/30 p-2 rounded-xl backdrop-blur-sm transition">
+            <i class="fas fa-arrow-left"></i>
+        </button>
+        <div>
+            <h1 class="text-2xl font-bold">My Assignments</h1>
+            <p class="text-xs text-green-100 mt-0.5">Download Qns & Upload Ans</p>
         </div>
     </header>
 
-    <div class="max-w-md mx-auto px-4 mb-6">
-        <div class="relative">
-            <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-            <input type="text" id="searchAssign" placeholder="Search assignments..." 
-                   class="w-full pl-10 pr-4 py-3 rounded-2xl shadow-sm border border-gray-200 outline-none focus:ring-2 ring-green-500/20 text-gray-700 bg-white">
+    <div id="uploadAlert" class="max-w-md mx-auto px-4 hidden mb-4">
+        <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-2xl text-sm font-bold flex items-center gap-2">
+            <i class="fas fa-check-circle text-green-500 text-lg"></i>
+            <span>Assignment submitted successfully!</span>
         </div>
     </div>
 
     <main id="assignList" class="max-w-md mx-auto px-4 space-y-4">
-        <div class="skeleton w-full h-24 rounded-2xl"></div>
-        <div class="skeleton w-full h-24 rounded-2xl"></div>
+        <div class="skeleton w-full h-32 rounded-2xl"></div>
+        <div class="skeleton w-full h-32 rounded-2xl"></div>
     </main>
 
 <script type="module">
-    // DHYAN DEIN: Yahan apna sahi firebase-init.js ka path lagayein
-    import { db } from '../js/firebase-init.js'; 
-    import { collection, query, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    import { auth, db } from '../js/firebase-init.js'; 
+    import { collection, query, onSnapshot, orderBy, addDoc, serverTimestamp, getDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
-    let assignmentsData = [];
-    const searchAssign = document.getElementById('searchAssign');
+    let currentUserData = null;
+    let currentAssignId = ""; // Jis assignment mein upload karna hai uska ID
     const assignList = document.getElementById('assignList');
+    const uploadAlert = document.getElementById('uploadAlert');
 
-    // Live query setup for 'assignments' collection
-    // Note: Agar specific class ka filter lagana hai, toh where("targetClass", "==", "Class 10") add kar sakte hain
-    const q = query(
-        collection(db, "assignments"), 
-        orderBy("createdAt", "desc")
-    );
-
-    onSnapshot(q, (snapshot) => {
-        assignmentsData = [];
-        snapshot.forEach(doc => {
-            assignmentsData.push(doc.data());
-        });
-        renderAssignments(assignmentsData);
-    }, (error) => {
-        assignList.innerHTML = `<p class="text-center text-red-500 py-10">Error loading data: ${error.message}</p>`;
+    // 1. Check Login & Get Student Details
+    onAuthStateChanged(auth, async (user) => {
+        if(user) {
+            const userSnap = await getDoc(doc(db, "users", user.uid));
+            if(userSnap.exists()) {
+                currentUserData = userSnap.data();
+                loadAssignments();
+            } else {
+                assignList.innerHTML = `<p class="text-center text-red-500 mt-10">User data not found!</p>`;
+            }
+        } else {
+            alert("Please login first!");
+            window.location.href = "../index.html";
+        }
     });
 
-    // Render list into UI
-    function renderAssignments(data) {
-        assignList.innerHTML = "";
-        
-        if(data.length === 0) {
-            assignList.innerHTML = `
-                <div class="text-center py-16 bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-                    <div class="w-16 h-16 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
-                    <p class="text-gray-800 font-bold text-lg">All Caught Up!</p>
-                    <p class="text-sm text-gray-400 mt-1">No pending assignments at the moment.</p>
-                </div>`;
-            return;
+    // 2. Cloudinary Setup for Student Upload
+    const submitWidget = cloudinary.createUploadWidget({
+        cloudName: 'dl1cddemu', 
+        uploadPreset: 'upload', 
+        resourceType: 'raw',
+        clientAllowedFormats: ["pdf", "jpg", "png"]
+    }, async (err, result) => {
+        if (!err && result && result.event === "success") {
+            try {
+                // PDF link browser view fix
+                let rawUrl = result.info.secure_url;
+                let finalUrl = rawUrl.includes('/upload/') ? rawUrl.replace('/upload/', '/upload/fl_attachment/') : rawUrl;
+
+                // Save submission to database
+                await addDoc(collection(db, "submissions"), {
+                    assignmentId: currentAssignId,
+                    studentId: auth.currentUser.uid,
+                    studentName: currentUserData.name || currentUserData.firstName || "Unknown Student",
+                    className: currentUserData.class || "N/A",
+                    fileUrl: finalUrl,
+                    marks: "Pending", // Default marks state
+                    submittedAt: serverTimestamp()
+                });
+                
+                // Show Success Message
+                uploadAlert.classList.remove('hidden');
+                setTimeout(() => uploadAlert.classList.add('hidden'), 4000);
+
+            } catch (error) {
+                alert("Database Error: " + error.message);
+            }
         }
+    });
 
-        data.forEach(item => {
-            // Cloudinary download link error fix (fl_attachment)
-            const rawUrl = item.fileUrl || "#";
-            const optimizedUrl = rawUrl.includes('/upload/') ? rawUrl.replace('/upload/', '/upload/fl_attachment/') : rawUrl;
+    // 3. Trigger Cloudinary Widget
+    window.openUpload = (assignId) => {
+        currentAssignId = assignId;
+        submitWidget.open();
+    };
 
-            assignList.innerHTML += `
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col transition-all hover:shadow-md relative overflow-hidden">
-                    <div class="absolute top-0 right-0 bg-red-50 text-red-600 text-[10px] font-bold px-3 py-1 rounded-bl-xl border-b border-l border-red-100">
-                        Pending
+    // 4. Load Assignments
+    function loadAssignments() {
+        const q = query(collection(db, "assignments"), orderBy("createdAt", "desc"));
+        
+        onSnapshot(q, (snapshot) => {
+            assignList.innerHTML = "";
+            
+            if(snapshot.empty) {
+                assignList.innerHTML = `
+                    <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 text-center mt-6">
+                        <i class="fas fa-clipboard-check text-4xl text-green-200 mb-3"></i>
+                        <p class="text-gray-800 font-bold text-lg">All Caught Up!</p>
+                        <p class="text-sm text-gray-400 mt-1">No pending assignments found.</p>
+                    </div>`;
+                return;
+            }
+
+            snapshot.forEach((docSnap) => {
+                const item = docSnap.data();
+                const assignId = docSnap.id;
+                
+                // Cloudinary Fix for Admin's Question PDF
+                const rawQnUrl = item.fileUrl || "#";
+                const qnUrl = rawQnUrl.includes('/upload/') ? rawQnUrl.replace('/upload/', '/upload/fl_attachment/') : rawQnUrl;
+
+                assignList.innerHTML += `
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-4 relative overflow-hidden transition-all hover:shadow-md">
+                        <div class="absolute top-0 right-0 bg-blue-50 text-blue-600 text-[10px] font-bold px-3 py-1 rounded-bl-xl">
+                            Class ${item.targetClass || item.className || 'General'}
+                        </div>
+                        
+                        <h3 class="font-bold text-gray-800 text-lg pr-12">${item.title || 'Untitled'}</h3>
+                        ${item.description ? `<p class="text-xs text-gray-500 mt-1 line-clamp-2">${item.description}</p>` : ''}
+                        
+                        <div class="mt-4 flex gap-2">
+                            ${item.fileUrl ? `
+                                <a href="${qnUrl}" target="_blank" class="flex-1 bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 py-2.5 rounded-xl font-bold text-center text-xs flex items-center justify-center gap-2 transition">
+                                    <i class="fas fa-download text-gray-500"></i> View Qns
+                                </a>
+                            ` : ''}
+                            
+                            <button onclick="openUpload('${assignId}')" class="flex-1 bg-green-500 hover:bg-green-600 text-white py-2.5 rounded-xl font-bold text-xs shadow-md shadow-green-500/20 flex items-center justify-center gap-2 transition">
+                                <i class="fas fa-upload"></i> Upload Ans
+                            </button>
+                        </div>
                     </div>
-                    
-                    <h3 class="font-bold text-gray-800 text-lg leading-tight pr-16">${item.title || 'Untitled Assignment'}</h3>
-                    <p class="text-xs text-gray-500 mt-1"><i class="fas fa-book mr-1"></i> ${item.subject || item.className || 'General'}</p>
-                    
-                    <div class="mt-4 flex gap-2">
-                        <a href="${optimizedUrl}" target="_blank" 
-                           class="flex-1 bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 py-2 rounded-xl font-bold shadow-sm transition-colors text-center text-sm flex items-center justify-center gap-2">
-                            <i class="fas fa-download"></i> Download PDF
-                        </a>
-                    </div>
-                </div>
-            `;
+                `;
+            });
         });
     }
-
-    // Live Search input trigger
-    searchAssign.addEventListener('input', (e) => {
-        const text = e.target.value.toLowerCase();
-        const filtered = assignmentsData.filter(item => 
-            (item.title && item.title.toLowerCase().includes(text)) || 
-            (item.subject && item.subject.toLowerCase().includes(text))
-        );
-        renderAssignments(filtered);
-    });
 </script>
 </body>
 </html>
