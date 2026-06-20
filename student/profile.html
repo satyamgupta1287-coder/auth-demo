@@ -6,6 +6,10 @@
     <title>Student Profile</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
 </head>
 <body class="bg-gray-50 min-h-screen font-sans pb-24">
 
@@ -31,44 +35,97 @@
             <p id="profileRoll" class="text-sm text-gray-500 font-medium mt-0.5">ID: Fetching...</p>
         </div>
 
-        <div class="px-4 mt-8 space-y-4">
+        <div class="px-4 mt-8 space-y-5">
             
-            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider px-1">Academic Details</h3>
-            
-            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-                <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-lg"><i class="fas fa-graduation-cap"></i></div>
-                <div class="flex-1">
-                    <p class="text-[10px] text-gray-400 font-bold uppercase">Class & Batch</p>
-                    <h4 id="profileClass" class="text-base font-bold text-gray-800">Loading...</h4>
+            <div>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider px-1 mb-2">Academic Details</h3>
+                <div class="space-y-3">
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+                        <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-lg"><i class="fas fa-graduation-cap"></i></div>
+                        <div class="flex-1">
+                            <p class="text-[10px] text-gray-400 font-bold uppercase">Class & Batch</p>
+                            <h4 id="profileClass" class="text-base font-bold text-gray-800">Loading...</h4>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+                        <div class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-lg"><i class="fas fa-id-card"></i></div>
+                        <div class="flex-1">
+                            <p class="text-[10px] text-gray-400 font-bold uppercase">Admission Number</p>
+                            <h4 id="profileAdmissionNo" class="text-base font-bold text-gray-800">Loading...</h4>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-                <div class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-lg"><i class="fas fa-id-card"></i></div>
-                <div class="flex-1">
-                    <p class="text-[10px] text-gray-400 font-bold uppercase">Admission Number</p>
-                    <h4 id="profileAdmissionNo" class="text-base font-bold text-gray-800">Loading...</h4>
+            <div>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider px-1 mb-2">Personal Info</h3>
+                <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 space-y-3">
+                    <div class="flex justify-between items-center text-sm border-b border-gray-50 pb-2">
+                        <span class="text-gray-500 font-medium">Date of Birth</span>
+                        <span id="profileDob" class="font-bold text-gray-800">N/A</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm border-b border-gray-50 pb-2">
+                        <span class="text-gray-500 font-medium">Gender</span>
+                        <span id="profileGender" class="font-bold text-gray-800">N/A</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-gray-500 font-medium">Blood Group</span>
+                        <span id="profileBlood" class="font-bold text-red-500">N/A</span>
+                    </div>
                 </div>
             </div>
 
-            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider px-1 pt-2">Fee Summary Ledger</h3>
-
-            <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 space-y-3">
-                <div class="flex justify-between items-center text-sm border-b border-gray-50 pb-2">
-                    <span class="text-gray-500 font-medium">Total Course Fee</span>
-                    <span id="feeTotal" class="font-bold text-gray-800">₹0</span>
-                </div>
-                <div class="flex justify-between items-center text-sm border-b border-gray-50 pb-2">
-                    <span class="text-gray-500 font-medium">Total Paid Fee</span>
-                    <span id="feePaid" class="font-bold text-green-600">₹0</span>
-                </div>
-                <div class="flex justify-between items-center text-sm pt-1">
-                    <span class="text-gray-700 font-bold">Pending Dues</span>
-                    <span id="feePending" class="font-black text-red-600 bg-red-50 px-2.5 py-0.5 rounded-lg border border-red-100">₹0</span>
+            <div>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider px-1 mb-2">Contact Details</h3>
+                <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 space-y-3">
+                    <div class="flex flex-col border-b border-gray-50 pb-3">
+                        <span class="text-gray-400 text-[10px] font-bold uppercase mb-0.5">Mobile Number</span>
+                        <span id="profileMobile" class="font-bold text-gray-800 text-sm">N/A</span>
+                    </div>
+                    <div class="flex flex-col border-b border-gray-50 pb-3">
+                        <span class="text-gray-400 text-[10px] font-bold uppercase mb-0.5">Email Address</span>
+                        <span id="profileEmail" class="font-bold text-gray-800 text-sm truncate">N/A</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-gray-400 text-[10px] font-bold uppercase mb-0.5">Current Address</span>
+                        <span id="profileAddress" class="font-bold text-gray-800 text-sm leading-tight">N/A</span>
+                    </div>
                 </div>
             </div>
 
-            <div class="pt-4">
+            <div>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider px-1 mb-2">Family Details</h3>
+                <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 space-y-3">
+                    <div class="flex justify-between items-center text-sm border-b border-gray-50 pb-2">
+                        <span class="text-gray-500 font-medium">Father's Name</span>
+                        <span id="profileFather" class="font-bold text-gray-800 text-right">N/A</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-gray-500 font-medium">Mother's Name</span>
+                        <span id="profileMother" class="font-bold text-gray-800 text-right">N/A</span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider px-1 mb-2">Fee Summary Ledger</h3>
+                <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 space-y-3">
+                    <div class="flex justify-between items-center text-sm border-b border-gray-50 pb-2">
+                        <span class="text-gray-500 font-medium">Total Course Fee</span>
+                        <span id="feeTotal" class="font-bold text-gray-800">₹0</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm border-b border-gray-50 pb-2">
+                        <span class="text-gray-500 font-medium">Total Paid Fee</span>
+                        <span id="feePaid" class="font-bold text-green-600">₹0</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm pt-1">
+                        <span class="text-gray-700 font-bold">Pending Dues</span>
+                        <span id="feePending" class="font-black text-red-600 bg-red-50 px-2.5 py-0.5 rounded-lg border border-red-100">₹0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-2">
                 <button id="profileLogoutBtn" class="w-full bg-red-50 text-red-600 border border-red-200/60 font-bold py-4 rounded-2xl hover:bg-red-100 transition flex justify-center items-center gap-2 shadow-sm">
                     <i class="fas fa-sign-out-alt"></i> Logout Account
                 </button>
@@ -109,28 +166,48 @@
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             try {
-                // Fetch user data matching dashboard hierarchy
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 if (userDoc.exists()) {
-                    const userData = userDoc.data();
+                    const data = userDoc.data();
 
-                    // Set Avatar
-                    if(userData.photoBase64) {
-                        document.getElementById('userAvatar').src = userData.photoBase64;
+                    // Avatar
+                    if(data.photoUrl || data.photoBase64) {
+                        document.getElementById('userAvatar').src = data.photoUrl || data.photoBase64;
                     }
 
-                    // Map fields accurately
-                    document.getElementById('profileName').innerText = userData.name || userData.firstName || 'Student';
-                    document.getElementById('profileRoll').innerText = "ID: " + (userData.studentId || userData.admissionNo || 'N/A');
-                    document.getElementById('profileAdmissionNo').innerText = userData.admissionNo || userData.studentId || 'N/A';
+                    // Basic Header
+                    document.getElementById('profileName').innerText = data.name || data.firstName || 'Student';
+                    document.getElementById('profileRoll').innerText = "ID: " + (data.studentId || data.admissionNo || 'N/A');
                     
-                    let studentClass = userData.class ? `Class ${userData.class}` : 'Unassigned';
-                    let studentSection = userData.section ? ` - ${userData.section}` : '';
-                    document.getElementById('profileClass').innerText = studentClass + studentSection;
+                    // Academic
+                    document.getElementById('profileAdmissionNo').innerText = data.admissionNo || data.studentId || 'N/A';
+                    let stuClass = data.class ? `Class ${data.class}` : 'Unassigned';
+                    let stuSec = data.section ? ` - ${data.section}` : '';
+                    document.getElementById('profileClass').innerText = stuClass + stuSec;
 
-                    // Fees Data Mapping
-                    const totalFee = userData.totalFee || 0;
-                    const paidFee = userData.paidFee || 0;
+                    // Personal
+                    document.getElementById('profileDob').innerText = data.dob || 'N/A';
+                    document.getElementById('profileGender').innerText = data.gender || 'N/A';
+                    document.getElementById('profileBlood').innerText = data.bloodGroup || 'N/A';
+
+                    // Contact
+                    document.getElementById('profileMobile').innerText = data.mobile || 'N/A';
+                    document.getElementById('profileEmail').innerText = data.email || 'N/A';
+                    let addressText = "N/A";
+                    if(data.currAddress) {
+                        addressText = data.currAddress;
+                        if(data.city) addressText += `, ${data.city}`;
+                        if(data.state) addressText += `, ${data.state}`;
+                    }
+                    document.getElementById('profileAddress').innerText = addressText;
+
+                    // Parents
+                    document.getElementById('profileFather').innerText = data.fatherName || 'N/A';
+                    document.getElementById('profileMother').innerText = data.motherName || 'N/A';
+
+                    // Fees 
+                    const totalFee = data.totalFee || 0;
+                    const paidFee = data.paidFee || 0;
                     const pendingFee = totalFee - paidFee;
 
                     document.getElementById('feeTotal').innerText = "₹" + totalFee;
@@ -138,18 +215,16 @@
                     document.getElementById('feePending').innerText = "₹" + pendingFee;
 
                 } else {
-                    alert("Profile data not found in database.");
-                    window.location.href = "../index.html";
+                    alert("Profile data not found!");
                 }
             } catch (error) {
-                console.error("Error loading profile: ", error);
+                console.error("Error: ", error);
             }
         } else {
             window.location.href = "../index.html";
         }
     });
 
-    // Handle logout inside profile configuration
     document.getElementById('profileLogoutBtn').addEventListener('click', async () => {
         if(confirm("Are you sure you want to logout?")) {
             await signOut(auth);
