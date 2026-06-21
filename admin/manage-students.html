@@ -20,7 +20,7 @@
         <button onclick="window.history.back()" class="bg-white/20 p-2 rounded-lg hover:bg-white/30 transition"><i class="fas fa-arrow-left"></i></button>
         <div>
             <h1 class="text-xl font-bold">Manage Students</h1>
-            <p class="text-xs text-blue-200">Complete Student Directory</p>
+            <p class="text-xs text-blue-200" id="adminSchoolBadge">Loading School Data...</p>
         </div>
     </header>
 
@@ -167,10 +167,39 @@
     </div>
 
 <script type="module">
-    import { db } from '../js/firebase-init.js';
-    import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    import { auth, db } from '../js/firebase-init.js';
+    import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, serverTimestamp, query, where, getDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
     let currentEditId = null;
+    let adminSchoolId = null; // Global variable to store admin's school ID
+
+    // --- 1. Auth Check & Fetch Admin School ID ---
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            try {
+                const adminDocRef = doc(db, "users", user.uid);
+                const adminSnap = await getDoc(adminDocRef);
+
+                if (adminSnap.exists()) {
+                    adminSchoolId = adminSnap.data().schoolId; 
+                    document.getElementById('adminSchoolBadge').innerText = "School Code: " + adminSchoolId;
+                    
+                    // Agar List tab open hai, toh data load karo
+                    if(!document.getElementById('listTab').classList.contains('hidden')) {
+                        loadStudents();
+                    }
+                } else {
+                    alert("Admin data not found!");
+                }
+            } catch (error) {
+                console.error("Error fetching admin details:", error);
+            }
+        } else {
+            window.location.href = "../index.html";
+        }
+    });
+
 
     // --- UI Logic ---
     window.switchTab = (tabId) => {
@@ -181,7 +210,9 @@
         document.getElementById('btnFormTab').className = tabId === 'formTab' ? 'flex-1 py-4 tab-active transition' : 'flex-1 py-4 tab-inactive transition';
         document.getElementById('btnListTab').className = tabId === 'listTab' ? 'flex-1 py-4 tab-active transition' : 'flex-1 py-4 tab-inactive transition';
 
-        if(tabId === 'listTab') loadStudents();
+        if(tabId === 'listTab' && adminSchoolId) {
+            loadStudents();
+        }
     };
 
     window.updateFullName = () => {
@@ -230,10 +261,21 @@
     // --- Save / Update Data ---
     document.getElementById('studentForm').addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        if(!adminSchoolId) {
+            alert("Admin School ID not loaded yet. Please wait or refresh.");
+            return;
+        }
+
         const btn = document.getElementById('saveBtn');
         btn.innerText = "Saving..."; btn.disabled = true;
 
         const studentData = {
+            // Naye Filter Fields (Multi-Tenant)
+            schoolId: adminSchoolId,
+            role: "student",
+            
+            // Biodata Fields
             studentId: document.getElementById('stuId').value,
             admissionNo: document.getElementById('admNo').value,
             photoUrl: document.getElementById('photoUrl').value,
@@ -277,12 +319,10 @@
 
         try {
             if(currentEditId) {
-                // Update in 'users' collection
                 await updateDoc(doc(db, "users", currentEditId), studentData);
                 alert("Student Record Updated!");
             } else {
                 studentData.createdAt = serverTimestamp();
-                // Save to 'users' collection
                 await addDoc(collection(db, "users"), studentData);
                 alert("New Student Registered Successfully!");
             }
@@ -296,18 +336,24 @@
         }
     });
 
-    // --- Load Students List ---
+    // --- Load Students List (WITH SCHOOL FILTER) ---
     async function loadStudents() {
         const container = document.getElementById('studentContainer');
         container.innerHTML = `<p class="text-center text-blue-500 py-10 font-bold"><i class="fas fa-spinner fa-spin mr-2"></i>Fetching records...</p>`;
         
         try {
-            // Fetch from 'users' collection
-            const querySnapshot = await getDocs(collection(db, "users"));
+            // Yahan Filter lagaya hai -> role: student & schoolId: adminSchoolId
+            const q = query(
+                collection(db, "users"), 
+                where("role", "==", "student"),
+                where("schoolId", "==", adminSchoolId)
+            );
+
+            const querySnapshot = await getDocs(q);
             container.innerHTML = "";
             
             if(querySnapshot.empty) {
-                container.innerHTML = `<p class="text-gray-400 text-center py-10">No students registered yet.</p>`;
+                container.innerHTML = `<p class="text-gray-400 text-center py-10">No students registered in this school yet.</p>`;
                 return;
             }
 
@@ -334,7 +380,7 @@
                 `;
             });
         } catch (e) {
-            container.innerHTML = `<p class="text-red-500 text-center py-10">Error loading data.</p>`;
+            container.innerHTML = `<p class="text-red-500 text-center py-10">Error loading data: ${e.message}</p>`;
         }
     }
 
