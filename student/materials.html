@@ -49,7 +49,6 @@
             <p class="text-sm text-gray-500">Loading materials...</p>
         </div>
     </div>
-
 </div>
 
 <script type="module">
@@ -58,28 +57,29 @@
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
     let currentClass = "";
-    let currentTab = "book"; // Default tab
-    let allMaterials = []; // Database se aaya saara data yahan store hoga
+    let studentSchoolId = "";
+    let currentTab = "book"; 
+    let allMaterials = []; 
 
-    // 1. Auth aur Class Check karein
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             const userDoc = await getDoc(doc(db, "users", user.uid));
             if (userDoc.exists()) {
                 currentClass = userDoc.data().class;
+                studentSchoolId = userDoc.data().schoolId; // FILTER ADDED
                 
-                if(!currentClass) {
+                if(!currentClass || !studentSchoolId) {
                     document.getElementById('materialsContainer').innerHTML = `
                         <div class="bg-red-50 p-4 rounded-2xl border border-red-100 text-center mt-4">
                             <i class="fas fa-exclamation-triangle text-red-500 text-2xl mb-2"></i>
-                            <p class="text-sm text-red-600 font-bold">Class not assigned!</p>
-                            <p class="text-xs text-gray-500 mt-1">Please ask admin to update your class profile.</p>
+                            <p class="text-sm text-red-600 font-bold">Profile Incomplete!</p>
+                            <p class="text-xs text-gray-500 mt-1">Please ask admin to update your class/school profile.</p>
                         </div>`;
                     return;
                 }
 
                 document.getElementById('displayClass').innerText = `Class ${currentClass}`;
-                fetchMaterials(); // Data laao
+                fetchMaterials();
             } else {
                 window.location.href = "../index.html";
             }
@@ -88,46 +88,38 @@
         }
     });
 
-    // 2. Database se Material lana (Sirf currentClass ka)
     function fetchMaterials() {
-        const q = query(collection(db, "study_materials"), where("targetClass", "==", currentClass));
+        // ONLY FETCH THIS SCHOOL'S MATERIALS
+        const q = query(collection(db, "study_materials"), where("schoolId", "==", studentSchoolId));
         
         onSnapshot(q, (snapshot) => {
             allMaterials = [];
-            snapshot.forEach((doc) => {
-                allMaterials.push({ id: doc.id, ...doc.data() });
+            snapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                if(String(data.targetClass) === String(currentClass)) {
+                    allMaterials.push({ id: docSnap.id, ...data });
+                }
             });
-            
-            // Latest pehle dikhane ke liye JS mein sort kar diya
-            allMaterials.sort((a, b) => b.createdAt - a.createdAt); 
-            
-            renderMaterials(); // UI par dikhao
+            allMaterials.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0)); 
+            renderMaterials(); 
         });
     }
 
-    // 3. Tab Switch logic aur UI update
     window.switchTab = (tabName) => {
         currentTab = tabName;
-        
-        // Button Colors change karna
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.remove('bg-blue-600', 'text-white', 'shadow-md');
             btn.classList.add('bg-white', 'text-gray-600');
         });
-        
         const activeBtn = document.getElementById(`tab-${tabName}`);
         activeBtn.classList.remove('bg-white', 'text-gray-600');
         activeBtn.classList.add('bg-blue-600', 'text-white', 'shadow-md');
-
         renderMaterials();
     };
 
-    // 4. Data ko screen par lagana (Current Tab ke hisaab se)
     function renderMaterials() {
         const container = document.getElementById('materialsContainer');
         container.innerHTML = "";
-
-        // Filter by currentTab (book, notes, pyq, model)
         const filteredMaterials = allMaterials.filter(item => item.type === currentTab);
 
         if (filteredMaterials.length === 0) {
@@ -135,7 +127,7 @@
                 <div class="bg-white p-6 rounded-2xl border border-gray-100 text-center mt-4">
                     <i class="fas fa-folder-open text-gray-300 text-4xl mb-3"></i>
                     <p class="text-sm font-bold text-gray-600">No ${currentTab}s found.</p>
-                    <p class="text-xs text-gray-400 mt-1">Admin has not uploaded any ${currentTab} for Class ${currentClass} yet.</p>
+                    <p class="text-xs text-gray-400 mt-1">Admin has not uploaded any ${currentTab} for your class yet.</p>
                 </div>
             `;
             return;
@@ -151,12 +143,10 @@
                     <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
                         <i class="fas ${iconClass} text-xl"></i>
                     </div>
-                    
                     <div class="flex-grow">
                         <h4 class="font-bold text-gray-800 text-sm line-clamp-1">${data.title}</h4>
                         <p class="text-xs text-gray-500 mt-0.5">${data.subject} ${data.year !== 'N/A' ? `• ${data.year}` : ''}</p>
                     </div>
-                    
                     <a href="${data.fileUrl}" target="_blank" class="w-10 h-10 bg-gray-50 hover:bg-blue-50 hover:text-blue-600 border border-gray-200 rounded-full flex items-center justify-center text-gray-600 transition flex-shrink-0">
                         <i class="fas fa-download text-sm"></i>
                     </a>
@@ -167,3 +157,4 @@
 </script>
 </body>
 </html>
+                    
