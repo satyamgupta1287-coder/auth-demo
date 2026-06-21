@@ -35,7 +35,8 @@
             </div>
             <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center">
                 <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Total Teachers</p>
-                <h2 class="text-3xl font-bold text-fuchsia-600">1</h2> </div>
+                <h2 class="text-3xl font-bold text-fuchsia-600">1</h2> 
+            </div>
         </div>
     </div>
 
@@ -95,10 +96,9 @@
             </button>
 
             <button onclick="window.location.href='create-assignment.html'" class="bg-purple-50 p-4 rounded-2xl flex flex-col items-center justify-center text-center border border-purple-100 hover:bg-purple-100 transition shadow-sm">
-    <i class="fas fa-clipboard-list text-purple-600 mb-2 text-2xl"></i>
-    <span class="text-[12px] font-bold text-gray-700">Assignments</span>
-</button>
-
+                <i class="fas fa-clipboard-list text-purple-600 mb-2 text-2xl"></i>
+                <span class="text-[12px] font-bold text-gray-700">Assignments</span>
+            </button>
 
         </div>
     </div>
@@ -107,16 +107,30 @@
 <script type="module">
     import { auth, db } from '../js/firebase-init.js';
     import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
-    import { collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    import { doc, getDoc, collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
-    // 1. Auth Check
-    onAuthStateChanged(auth, (user) => {
+    // 1. Auth Check & Get Admin School ID
+    onAuthStateChanged(auth, async (user) => {
         if (!user) {
-            window.location.href = "../index.html"; // Redirect to login if not logged in
+            window.location.href = "../index.html"; 
         } else {
-            // Check if user is actually admin (Optional but recommended)
-            // Here we just fetch student count
-            fetchStudentCount();
+            try {
+                // Fetch Admin's specific document to get their schoolId
+                const adminDocRef = doc(db, "users", user.uid);
+                const adminSnap = await getDoc(adminDocRef);
+
+                if (adminSnap.exists()) {
+                    const adminData = adminSnap.data();
+                    const adminSchoolId = adminData.schoolId; 
+                    
+                    // Fetch students matching this school code ONLY
+                    fetchStudentCount(adminSchoolId);
+                } else {
+                    console.log("Admin data not found in users collection.");
+                }
+            } catch (error) {
+                console.error("Error fetching admin details:", error);
+            }
         }
     });
 
@@ -128,9 +142,16 @@
         }
     });
 
-    // 3. Fetch Real Student Count
-    function fetchStudentCount() {
-        const q = query(collection(db, "users"), where("role", "==", "student"));
+    // 3. Fetch Real Student Count (Multi-Tenant Filter Applied)
+    function fetchStudentCount(adminSchoolId) {
+        if(!adminSchoolId) return;
+
+        const q = query(
+            collection(db, "users"), 
+            where("role", "==", "student"),
+            where("schoolId", "==", adminSchoolId)
+        );
+        
         onSnapshot(q, (snapshot) => {
             document.getElementById('totalStudentsCount').innerText = snapshot.size;
         });
@@ -138,4 +159,3 @@
 </script>
 </body>
 </html>
-
