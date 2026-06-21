@@ -159,7 +159,7 @@
                 let marksHtml = "";
                 let actionButtonHtml = `
                     <button onclick="openUpload('${assignId}')" class="flex-1 bg-green-500 hover:bg-green-600 text-white py-2.5 rounded-xl font-bold text-xs shadow-md shadow-green-500/20 flex items-center justify-center gap-2 transition">
-                        <i class="fas fa-upload"></i> Upload Ans
+                        <i class="fas fa-upload"></i> Upload Assignment
                     </button>
                 `;
 
@@ -168,7 +168,7 @@
                         statusBadge = `<div class="absolute top-0 right-0 bg-yellow-50 text-yellow-700 text-[10px] font-bold px-3 py-1 rounded-bl-xl border-l border-b border-yellow-100">Submitted</div>`;
                         actionButtonHtml = `
                             <button onclick="openUpload('${assignId}')" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white py-2.5 rounded-xl font-bold text-xs shadow-md transition">
-                                <i class="fas fa-edit"></i> Re-upload Ans
+                                <i class="fas fa-edit"></i> Re-upload Assignment
                             </button>
                         `;
                     } else {
