@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 font-sans pb-20 min-h-screen">
+
+<div class="max-w-md mx-auto">
+    <div class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-b-[2rem] p-6 text-white shadow-lg relative pb-12">
+        <div class="flex justify-between items-center mb-4">
+            <div>
+                <h1 class="text-2xl font-bold">Staff Dashboard</h1>
+                <p class="text-sm text-blue-200" id="welcomeMsg">Loading Profile...</p>
+            </div>
+            <button id="logoutBtn" class="bg-white/20 hover:bg-white/30 p-2.5 rounded-xl backdrop-blur-sm transition">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+        <p class="text-xs font-bold bg-white/10 inline-block px-3 py-1 rounded-full border border-white/20 shadow-sm" id="schoolBadge">School ID: ...</p>
+    </div>
+
+    <div class="px-4 mt-8">
+        <h2 class="text-lg font-bold text-gray-800 mb-4 px-1">Your Daily Workflow</h2>
+        
+        <div class="grid grid-cols-2 gap-3">
+            <button onclick="window.location.href='manage-attendance.html'" class="bg-emerald-50 p-4 rounded-2xl flex flex-col items-center border border-emerald-100 hover:bg-emerald-100 transition shadow-sm">
+                <i class="fas fa-check-circle text-emerald-600 text-2xl mb-2"></i>
+                <span class="text-xs font-bold text-gray-700">Take Attendance</span>
+            </button>
+
+            <button onclick="window.location.href='create-assignment.html'" class="bg-purple-50 p-4 rounded-2xl flex flex-col items-center border border-purple-100 hover:bg-purple-100 transition shadow-sm">
+                <i class="fas fa-clipboard-list text-purple-600 mb-2 text-2xl"></i>
+                <span class="text-xs font-bold text-gray-700">Assignments</span>
+            </button>
+
+            <button onclick="window.location.href='manage-classes.html'" class="bg-red-50 p-4 rounded-2xl flex flex-col items-center border border-red-100 hover:bg-red-100 transition shadow-sm">
+                <i class="fas fa-video text-red-500 text-2xl mb-2"></i>
+                <span class="text-xs font-bold text-gray-700">Live Classes</span>
+            </button>
+
+            <button onclick="window.location.href='manage-materials.html'" class="bg-indigo-50 p-4 rounded-2xl flex flex-col items-center border border-indigo-100 hover:bg-indigo-100 transition shadow-sm">
+                <i class="fas fa-book-open text-indigo-600 text-2xl mb-2"></i>
+                <span class="text-xs font-bold text-gray-700">Upload Notes</span>
+            </button>
+
+            <button onclick="window.location.href='view-results.html'" class="bg-orange-50 p-4 rounded-2xl flex flex-col items-center border border-orange-100 hover:bg-orange-100 transition shadow-sm">
+                <i class="fas fa-trophy text-orange-600 text-2xl mb-2"></i>
+                <span class="text-xs font-bold text-gray-700">Test Results</span>
+            </button>
+
+            <button onclick="window.location.href='manage-doubts.html'" class="bg-cyan-50 p-4 rounded-2xl flex flex-col items-center border border-cyan-100 hover:bg-cyan-100 transition shadow-sm">
+                <i class="fas fa-question-circle text-cyan-600 text-2xl mb-2"></i>
+                <span class="text-xs font-bold text-gray-700">Solve Doubts</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { auth, db } from '../js/firebase-init.js';
+    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+    // Auth verification
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+            window.location.href = "../index.html"; 
+        } else {
+            const docRef = await getDoc(doc(db, "users", user.uid));
+            if (docRef.exists()) {
+                const data = docRef.data();
+                // Check if user is legally a teacher/staff
+                if(data.role === "teacher" || data.role === "staff") {
+                    document.getElementById('welcomeMsg').innerText = `Welcome, ${data.name || 'Staff'}`;
+                    document.getElementById('schoolBadge').innerText = `School Code: ${data.schoolId}`;
+                } else {
+                    alert("Unauthorized Access!");
+                    window.location.href = "../index.html";
+                }
+            }
+        }
+    });
+
+    // Logout
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+        if(confirm("Are you sure you want to logout?")) {
+            await signOut(auth);
+            window.location.href = "../index.html";
+        }
+    });
+</script>
+</body>
+</html>
