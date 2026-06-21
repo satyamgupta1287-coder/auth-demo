@@ -40,7 +40,8 @@
 
 <script type="module">
     import { auth, db } from '../js/firebase-init.js'; 
-    import { collection, query, onSnapshot, orderBy, addDoc, serverTimestamp, getDoc, doc, where } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    // NAYA: orderBy hata diya gaya hai index error se bachne ke liye
+    import { collection, query, onSnapshot, addDoc, serverTimestamp, getDoc, doc, where } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
     let currentUserData = null;
@@ -91,7 +92,7 @@
                     studentId: auth.currentUser.uid,
                     studentName: currentUserData.name || currentUserData.firstName || "Unknown Student",
                     className: currentUserData.class || "N/A",
-                    schoolId: currentUserData.schoolId, // SCHOOL FILTER ADDED HERE
+                    schoolId: currentUserData.schoolId, 
                     fileUrl: finalUrl,
                     marks: "Pending", 
                     submittedAt: serverTimestamp()
@@ -115,16 +116,24 @@
         const targetClassStr = currentUserData ? String(currentUserData.class) : "";
         const schoolId = currentUserData ? currentUserData.schoolId : "";
         
-        // ONLY FETCH ASSIGNMENTS FOR THIS SCHOOL
-        const q = query(collection(db, "assignments"), where("schoolId", "==", schoolId), orderBy("createdAt", "desc"));
+        // NAYA: Sirf where() filter use kiya hai bina orderBy ke
+        const q = query(collection(db, "assignments"), where("schoolId", "==", schoolId));
         
         onSnapshot(q, (snapshot) => {
             assignList.innerHTML = "";
             
-            const filteredDocs = snapshot.docs.filter(docSnap => {
+            // Filter by Class
+            let filteredDocs = snapshot.docs.filter(docSnap => {
                 const item = docSnap.data();
                 const itemClass = item.targetClass || item.className || "";
                 return String(itemClass) === targetClassStr;
+            });
+
+            // NAYA: JavaScript ki madad se latest upload upar dikhane ka Hacker Trick (Client-side sorting)
+            filteredDocs.sort((a, b) => {
+                const timeA = a.data().createdAt?.toMillis() || 0;
+                const timeB = b.data().createdAt?.toMillis() || 0;
+                return timeB - timeA;
             });
 
             if(filteredDocs.length === 0) {
