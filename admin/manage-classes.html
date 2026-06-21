@@ -79,20 +79,37 @@
 
 <script type="module">
     import { auth, db } from '../js/firebase-init.js';
-    import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, deleteDoc, doc, where, getDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+
+    let adminSchoolId = null;
+
+    // 1. Auth & Get School ID
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            const adminDoc = await getDoc(doc(db, "users", user.uid));
+            if (adminDoc.exists()) {
+                adminSchoolId = adminDoc.data().schoolId;
+                loadClasses(); // Load classes only after getting school ID
+            }
+        } else {
+            window.location.href = "../index.html";
+        }
+    });
 
     const form = document.getElementById('classForm');
     const scheduleBtn = document.getElementById('scheduleBtn');
 
-    // --- 1. SCHEDULE CLASS LOGIC ---
+    // --- 2. SCHEDULE CLASS LOGIC ---
     form.addEventListener('submit', async () => {
+        if(!adminSchoolId) return alert("School ID missing!");
+
         const targetClass = document.getElementById('targetClass').value;
         const classTime = document.getElementById('classTime').value;
         const subject = document.getElementById('subject').value;
         const teacherName = document.getElementById('teacherName').value;
         const meetingLink = document.getElementById('meetingLink').value;
 
-        // Convert 24hr time to 12hr format for better display
         const timeParts = classTime.split(':');
         let hours = parseInt(timeParts[0]);
         const minutes = timeParts[1];
@@ -106,9 +123,10 @@
 
         try {
             await addDoc(collection(db, "live_classes"), {
+                schoolId: adminSchoolId, // FILTER ADDED
                 targetClass,
                 time: formattedTime,
-                rawTime: classTime, // keep raw time for sorting if needed
+                rawTime: classTime,
                 subject,
                 teacherName,
                 meetingLink,
@@ -125,55 +143,58 @@
         }
     });
 
-    // --- 2. DISPLAY CLASSES LOGIC ---
-    const q = query(collection(db, "live_classes"), orderBy("createdAt", "desc"));
-    onSnapshot(q, (snapshot) => {
-        const list = document.getElementById('classesList');
-        list.innerHTML = "";
+    // --- 3. DISPLAY CLASSES LOGIC (FILTERED) ---
+    function loadClasses() {
+        const q = query(
+            collection(db, "live_classes"), 
+            where("schoolId", "==", adminSchoolId), // FILTER ADDED
+            orderBy("createdAt", "desc")
+        );
         
-        if (snapshot.size === 0) {
-            list.innerHTML = `<p class="text-center text-sm text-gray-400 py-4">No upcoming classes.</p>`;
-            return;
-        }
+        onSnapshot(q, (snapshot) => {
+            const list = document.getElementById('classesList');
+            list.innerHTML = "";
+            
+            if (snapshot.size === 0) {
+                list.innerHTML = `<p class="text-center text-sm text-gray-400 py-4">No upcoming classes.</p>`;
+                return;
+            }
 
-        snapshot.forEach((docSnap) => {
-            const data = docSnap.data();
+            snapshot.forEach((docSnap) => {
+                const data = docSnap.data();
 
-            list.innerHTML += `
-                <div class="p-4 border rounded-xl bg-gray-50 relative">
-                    <button onclick="deleteClass('${docSnap.id}')" class="absolute top-3 right-3 text-red-400 hover:text-red-600 transition">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                    
-                    <div class="flex items-center gap-3 mb-2">
-                        <div class="w-10 h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-lg shadow-inner">
-                            <i class="fas fa-video"></i>
+                list.innerHTML += `
+                    <div class="p-4 border rounded-xl bg-gray-50 relative">
+                        <button onclick="deleteClass('${docSnap.id}')" class="absolute top-3 right-3 text-red-400 hover:text-red-600 transition">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                        
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-10 h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-lg shadow-inner">
+                                <i class="fas fa-video"></i>
+                            </div>
+                            <div>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-red-100 text-red-600">Class ${data.targetClass}</span>
+                                <h4 class="font-bold text-gray-800 text-sm mt-1">${data.subject} by ${data.teacherName}</h4>
+                            </div>
                         </div>
-                        <div>
-                            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-red-100 text-red-600">Class ${data.targetClass}</span>
-                            <h4 class="font-bold text-gray-800 text-sm mt-1">${data.subject} by ${data.teacherName}</h4>
+                        
+                        <div class="flex justify-between items-center mt-3 bg-white p-2 rounded-lg border border-gray-200">
+                            <p class="text-xs font-bold text-gray-600"><i class="far fa-clock text-red-500 mr-1"></i> ${data.time}</p>
+                            <a href="${data.meetingLink}" target="_blank" class="text-[10px] font-bold text-white bg-blue-500 px-3 py-1.5 rounded hover:bg-blue-600 transition shadow-sm">
+                                Join Link
+                            </a>
                         </div>
                     </div>
-                    
-                    <div class="flex justify-between items-center mt-3 bg-white p-2 rounded-lg border border-gray-200">
-                        <p class="text-xs font-bold text-gray-600"><i class="far fa-clock text-red-500 mr-1"></i> ${data.time}</p>
-                        <a href="${data.meetingLink}" target="_blank" class="text-[10px] font-bold text-white bg-blue-500 px-3 py-1.5 rounded hover:bg-blue-600 transition shadow-sm">
-                            Join Link
-                        </a>
-                    </div>
-                </div>
-            `;
+                `;
+            });
         });
-    });
+    }
 
-    // --- 3. DELETE CLASS LOGIC ---
+    // --- 4. DELETE CLASS LOGIC ---
     window.deleteClass = async (id) => {
         if(confirm("Delete this scheduled class?")) {
-            try {
-                await deleteDoc(doc(db, "live_classes", id));
-            } catch (err) {
-                alert("Error deleting: " + err.message);
-            }
+            await deleteDoc(doc(db, "live_classes", id));
         }
     };
 </script>
