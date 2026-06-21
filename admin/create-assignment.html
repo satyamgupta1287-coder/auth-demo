@@ -62,7 +62,8 @@
 
 <script type="module">
     import { auth, db } from '../js/firebase-init.js';
-    import { collection, addDoc, query, onSnapshot, orderBy, doc, updateDoc, serverTimestamp, where, getDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    // NAYA: orderBy hataya aur deleteDoc import kiya
+    import { collection, addDoc, query, onSnapshot, doc, updateDoc, serverTimestamp, where, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
     let uploadedFileUrl = "";
@@ -77,7 +78,7 @@
             const adminDoc = await getDoc(doc(db, "users", user.uid));
             if (adminDoc.exists()) {
                 adminSchoolId = adminDoc.data().schoolId;
-                loadGlobalSubmissions(); // Pehle submissions load karo
+                loadGlobalSubmissions(); 
             }
         } else {
             window.location.href = "../index.html";
@@ -111,7 +112,7 @@
 
         try {
             await addDoc(collection(db, "assignments"), {
-                schoolId: adminSchoolId, // FILTER ADDED
+                schoolId: adminSchoolId, 
                 title: title,
                 targetClass: targetClass,
                 className: targetClass,
@@ -134,10 +135,10 @@
     }
 
     function loadMasterList() {
+        // NAYA: Index error bypass via Client Side Sorting
         const q = query(
             collection(db, "assignments"), 
-            where("schoolId", "==", adminSchoolId), // FILTER ADDED
-            orderBy("createdAt", "desc")
+            where("schoolId", "==", adminSchoolId)
         );
         
         onSnapshot(q, (snapshot) => {
@@ -148,7 +149,16 @@
                 return;
             }
 
-            snapshot.forEach((docSnap) => {
+            // Client side sorting logic
+            let sortedDocs = [];
+            snapshot.forEach(docSnap => sortedDocs.push(docSnap));
+            sortedDocs.sort((a, b) => {
+                const timeA = a.data().createdAt?.toMillis() || 0;
+                const timeB = b.data().createdAt?.toMillis() || 0;
+                return timeB - timeA;
+            });
+
+            sortedDocs.forEach((docSnap) => {
                 const assignData = docSnap.data();
                 const assignId = docSnap.id;
 
