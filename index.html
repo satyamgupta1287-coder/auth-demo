@@ -30,11 +30,17 @@
             <input type="email" id="email" required placeholder="name@school.com" class="w-full p-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 transition">
         </div>
         
-        <div>
+        <div id="passwordContainer">
             <label class="block text-sm font-bold text-gray-700 mb-1">Password</label>
             <input type="password" id="password" required placeholder="••••••••" class="w-full p-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 transition">
+            
+            <div class="text-right mt-2" id="forgotPwdDiv">
+                <button type="button" id="forgotPwdBtn" class="text-[11px] font-bold text-blue-600 hover:underline">Forgot Password?</button>
+            </div>
         </div>
 
+        <p id="successMsg" class="text-green-600 text-sm hidden font-bold text-center bg-green-50 p-2 rounded-lg border border-green-100"></p>
+        
         <p id="errorMsg" class="text-red-500 text-sm hidden font-bold text-center bg-red-50 p-2 rounded-lg border border-red-100"></p>
 
         <button type="submit" id="submitBtn" class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 shadow-md transition">
@@ -59,18 +65,21 @@
 
 <script type="module">
     import { auth, db } from './js/firebase-init.js';
-    import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+    import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
     import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
     const authForm = document.getElementById('authForm');
     const submitBtn = document.getElementById('submitBtn');
     const errorMsg = document.getElementById('errorMsg');
+    const successMsg = document.getElementById('successMsg');
     const toggleModeBtn = document.getElementById('toggleModeBtn');
     const googleBtn = document.getElementById('googleBtn');
     const formTitle = document.getElementById('formTitle');
     const formSubtitle = document.getElementById('formSubtitle');
     const schoolCodeContainer = document.getElementById('schoolCodeContainer');
     const schoolCodeInput = document.getElementById('schoolCode');
+    const forgotPwdBtn = document.getElementById('forgotPwdBtn');
+    const forgotPwdDiv = document.getElementById('forgotPwdDiv');
 
     let isLoginMode = true;
     let isProcessingAction = false;
@@ -78,6 +87,9 @@
     // Toggle Mode (Login / Sign Up)
     toggleModeBtn.addEventListener('click', () => {
         isLoginMode = !isLoginMode;
+        errorMsg.classList.add('hidden');
+        successMsg.classList.add('hidden');
+
         if (isLoginMode) {
             formTitle.innerText = "Welcome Back";
             formSubtitle.innerText = "Please enter your details to sign in";
@@ -85,6 +97,7 @@
             toggleModeBtn.innerText = "Don't have an account? Create one";
             schoolCodeContainer.classList.add('hidden');
             schoolCodeInput.removeAttribute('required');
+            forgotPwdDiv.classList.remove('hidden');
         } else {
             formTitle.innerText = "Create Account";
             formSubtitle.innerText = "Sign up to access the portal";
@@ -92,6 +105,7 @@
             toggleModeBtn.innerText = "Already have an account? Sign In";
             schoolCodeContainer.classList.remove('hidden');
             schoolCodeInput.setAttribute('required', 'true');
+            forgotPwdDiv.classList.add('hidden');
         }
     });
 
@@ -112,6 +126,7 @@
         submitBtn.innerHTML = 'Processing...';
         submitBtn.disabled = true;
         errorMsg.classList.add('hidden');
+        successMsg.classList.add('hidden');
 
         try {
             let userCredential;
@@ -127,6 +142,35 @@
         }
     });
 
+    // Forgot Password Logic 🔥
+    forgotPwdBtn.addEventListener('click', async () => {
+        const email = document.getElementById('email').value.toLowerCase().trim();
+        
+        errorMsg.classList.add('hidden');
+        successMsg.classList.add('hidden');
+
+        if (!email) {
+            showError("Please enter your Email address first, then click 'Forgot Password'.");
+            document.getElementById('email').focus();
+            return;
+        }
+
+        const btnOriginalText = forgotPwdBtn.innerText;
+        forgotPwdBtn.innerText = "Sending Link...";
+        forgotPwdBtn.disabled = true;
+
+        try {
+            await sendPasswordResetEmail(auth, email);
+            successMsg.innerText = "✅ Password reset link sent! Please check your email.";
+            successMsg.classList.remove('hidden');
+        } catch (error) {
+            showError(error.message);
+        }
+
+        forgotPwdBtn.innerText = btnOriginalText;
+        forgotPwdBtn.disabled = false;
+    });
+
     // Google Sign In
     googleBtn.addEventListener('click', async () => {
         isProcessingAction = true;
@@ -139,18 +183,17 @@
         }
     });
 
-    // Smart Redirect & Auto-Database Entry Function 🔥
+    // Smart Redirect & Auto-Database Entry Function
     async function checkRoleAndRedirect(user) {
         try {
             const docRef = doc(db, "users", user.uid);
             let docSnap = await getDoc(docRef);
 
-            // AGAR DATABASE ME USER NAHI HAI (Naya Signup hua hai)
+            // AGAR DATABASE ME USER NAHI HAI (Naya Signup)
             if (!docSnap.exists()) {
                 let assignedRole = "student";
                 let assignedSchoolId = schoolCodeInput.value.toUpperCase();
 
-                // 1. Check in Pre-Registered Admins
                 const adminRef = doc(db, "pre_registered_admins", user.email.toLowerCase());
                 const adminSnap = await getDoc(adminRef);
 
@@ -159,14 +202,12 @@
                     assignedSchoolId = adminSnap.data().schoolId;
                 }
 
-                // 2. Google Se naya student aaya par School Code nahi dala
                 if (assignedRole === "student" && !assignedSchoolId) {
                     let manualCode = prompt("Please enter your School Code to continue:");
                     if (!manualCode) throw new Error("School Code is compulsory for Students!");
                     assignedSchoolId = manualCode.toUpperCase();
                 }
 
-                // 3. Save new user to Firestore
                 await setDoc(docRef, {
                     name: user.displayName || "User",
                     email: user.email.toLowerCase(),
@@ -175,16 +216,19 @@
                     createdAt: serverTimestamp()
                 });
                 
-                docSnap = await getDoc(docRef); // Data refresh
+                docSnap = await getDoc(docRef); 
             }
 
-            // 🌟 SMART REDIRECT LOGIC FOR ALL ROLES 🌟
+            // 🌟 FIX HERE: Teacher Role Bug Resolved 🌟
             const userData = docSnap.data();
             
-            if (userData.role === "admin") {
+            // "Teacher", "TEACHER", "teacher" sabko "teacher" me convert karega
+            const userRole = (userData.role || "student").toLowerCase().trim();
+            
+            if (userRole === "admin") {
                 window.location.href = "admin/admin.html"; // Owner/Principal
             } 
-            else if (userData.role === "teacher" || userData.role === "staff") {
+            else if (userRole === "teacher" || userRole === "staff") {
                 window.location.href = "admin/teacher-dashboard.html"; // Staff & Teachers
             } 
             else {
@@ -197,7 +241,12 @@
     }
 
     function showError(msg) {
-        errorMsg.innerText = msg.replace("Firebase: ", "");
+        let cleanMsg = msg.replace("Firebase: ", "");
+        if(cleanMsg.includes("auth/user-not-found")) cleanMsg = "This email is not registered. Please Sign Up.";
+        if(cleanMsg.includes("auth/wrong-password")) cleanMsg = "Incorrect password. Please try again.";
+        if(cleanMsg.includes("auth/invalid-email")) cleanMsg = "Invalid email format.";
+
+        errorMsg.innerText = cleanMsg;
         errorMsg.classList.remove('hidden');
         submitBtn.innerHTML = isLoginMode ? 'Sign In' : 'Sign Up';
         submitBtn.disabled = false;
@@ -206,4 +255,4 @@
 </script>
 </body>
 </html>
-                        
+                       
