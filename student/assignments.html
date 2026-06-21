@@ -45,18 +45,16 @@
 
     let currentUserData = null;
     let currentAssignId = "";
-    let studentSubmissions = {}; // Student ke saare submissions yahan store honge
+    let studentSubmissions = {}; 
     const assignList = document.getElementById('assignList');
     const uploadAlert = document.getElementById('uploadAlert');
 
-    // 1. Check Login & Setup Realtime Submissions Listener
     onAuthStateChanged(auth, async (user) => {
         if(user) {
             const userSnap = await getDoc(doc(db, "users", user.uid));
             if(userSnap.exists()) {
                 currentUserData = userSnap.data();
                 
-                // Student ke apne submissions ka live tracker
                 const subQuery = query(collection(db, "submissions"), where("studentId", "==", user.uid));
                 onSnapshot(subQuery, (subSnapshot) => {
                     studentSubmissions = {};
@@ -65,7 +63,6 @@
                         studentSubmissions[data.assignmentId] = data;
                     });
                     
-                    // Submissions map hone ke baad assignments load karenge
                     loadAssignments();
                 });
 
@@ -78,7 +75,6 @@
         }
     });
 
-    // 2. Cloudinary Setup for Student Upload
     const submitWidget = cloudinary.createUploadWidget({
         cloudName: 'dl1cddemu', 
         uploadPreset: 'upload', 
@@ -95,6 +91,7 @@
                     studentId: auth.currentUser.uid,
                     studentName: currentUserData.name || currentUserData.firstName || "Unknown Student",
                     className: currentUserData.class || "N/A",
+                    schoolId: currentUserData.schoolId, // SCHOOL FILTER ADDED HERE
                     fileUrl: finalUrl,
                     marks: "Pending", 
                     submittedAt: serverTimestamp()
@@ -114,15 +111,16 @@
         submitWidget.open();
     };
 
-    // 3. Load Assignments & Mix Submission Data
     function loadAssignments() {
         const targetClassStr = currentUserData ? String(currentUserData.class) : "";
-        const q = query(collection(db, "assignments"), orderBy("createdAt", "desc"));
+        const schoolId = currentUserData ? currentUserData.schoolId : "";
+        
+        // ONLY FETCH ASSIGNMENTS FOR THIS SCHOOL
+        const q = query(collection(db, "assignments"), where("schoolId", "==", schoolId), orderBy("createdAt", "desc"));
         
         onSnapshot(q, (snapshot) => {
             assignList.innerHTML = "";
             
-            // Filter classes manually to handle both string/number safely
             const filteredDocs = snapshot.docs.filter(docSnap => {
                 const item = docSnap.data();
                 const itemClass = item.targetClass || item.className || "";
@@ -146,7 +144,6 @@
                 const rawQnUrl = item.fileUrl || "#";
                 const qnUrl = rawQnUrl.includes('/upload/') ? rawQnUrl.replace('/upload/', '/upload/fl_attachment/') : rawQnUrl;
 
-                // Check submission status and marks for THIS assignment
                 const subInfo = studentSubmissions[assignId];
                 
                 let statusBadge = `<div class="absolute top-0 right-0 bg-blue-50 text-blue-600 text-[10px] font-bold px-3 py-1 rounded-bl-xl border-l border-b border-blue-100">Pending</div>`;
@@ -166,19 +163,16 @@
                             </button>
                         `;
                     } else {
-                        // Jab admin ne marks de diye hon
                         statusBadge = `<div class="absolute top-0 right-0 bg-green-50 text-green-700 text-[10px] font-bold px-3 py-1 rounded-bl-xl border-l border-b border-green-100">Checked</div>`;
-                        
                         marksHtml = `
                             <div class="mt-3 bg-green-50 border border-green-200/60 p-3 rounded-xl flex justify-between items-center">
                                 <span class="text-xs font-bold text-green-700"><i class="fas fa-star mr-1"></i> Your Score:</span>
                                 <span class="text-sm font-black text-green-800 bg-white px-2.5 py-0.5 rounded-md border border-green-300">${subInfo.marks}</span>
                             </div>
                         `;
-
                         actionButtonHtml = `
                             <button disabled class="flex-1 bg-gray-100 text-gray-400 py-2.5 rounded-xl font-bold text-xs cursor-not-allowed flex items-center justify-center gap-2">
-                                <i class="fas fa-lock"></i> Submission Locked
+                                <i class="fas fa-lock"></i> Locked
                             </button>
                         `;
                     }
@@ -187,19 +181,11 @@
                 assignList.innerHTML += `
                     <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-4 relative overflow-hidden transition-all hover:shadow-md">
                         ${statusBadge}
-                        
                         <h3 class="font-bold text-gray-800 text-lg pr-20">${item.title || 'Untitled'}</h3>
                         ${item.description ? `<p class="text-xs text-gray-500 mt-1 line-clamp-2">${item.description}</p>` : ''}
-                        
                         ${marksHtml}
-                        
                         <div class="mt-4 flex gap-2">
-                            ${item.fileUrl ? `
-                                <a href="${qnUrl}" target="_blank" class="flex-1 bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 py-2.5 rounded-xl font-bold text-center text-xs flex items-center justify-center gap-2 transition">
-                                    <i class="fas fa-download text-gray-500"></i> View Qns
-                                </a>
-                            ` : ''}
-                            
+                            ${item.fileUrl ? `<a href="${qnUrl}" target="_blank" class="flex-1 bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 py-2.5 rounded-xl font-bold text-center text-xs flex items-center justify-center gap-2 transition"><i class="fas fa-download text-gray-500"></i> View Qns</a>` : ''}
                             ${actionButtonHtml}
                         </div>
                     </div>
