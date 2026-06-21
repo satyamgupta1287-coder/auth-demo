@@ -20,7 +20,6 @@
     
     <form id="authForm" class="space-y-4" onsubmit="return false;">
         
-        <!-- NAYA: School Code Container (By default hidden in Login) -->
         <div id="schoolCodeContainer" class="hidden">
             <label class="block text-sm font-bold text-gray-700 mb-1">School Code <span class="text-red-500">*</span></label>
             <input type="text" id="schoolCode" placeholder="e.g. DAV01" class="w-full p-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 transition uppercase" style="text-transform: uppercase;">
@@ -121,7 +120,6 @@
                 await checkRoleAndRedirect(userCredential.user);
             } else {
                 userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                // Database entry ab checkRoleAndRedirect function karega!
                 await checkRoleAndRedirect(userCredential.user);
             }
         } catch (error) {
@@ -152,16 +150,16 @@
                 let assignedRole = "student";
                 let assignedSchoolId = schoolCodeInput.value.toUpperCase();
 
-                // 1. Check in Pre-Registered Admins (Super Admin Power)
+                // 1. Check in Pre-Registered Admins
                 const adminRef = doc(db, "pre_registered_admins", user.email.toLowerCase());
                 const adminSnap = await getDoc(adminRef);
 
                 if (adminSnap.exists()) {
                     assignedRole = "admin";
-                    assignedSchoolId = adminSnap.data().schoolId; // Termux wala data utha liya
+                    assignedSchoolId = adminSnap.data().schoolId;
                 }
 
-                // 2. Google Se naya student aaya par School Code nahi dala toh prompt karo
+                // 2. Google Se naya student aaya par School Code nahi dala
                 if (assignedRole === "student" && !assignedSchoolId) {
                     let manualCode = prompt("Please enter your School Code to continue:");
                     if (!manualCode) throw new Error("School Code is compulsory for Students!");
@@ -180,13 +178,19 @@
                 docSnap = await getDoc(docRef); // Data refresh
             }
 
-            // REDIRECT LOGIC
+            // 🌟 SMART REDIRECT LOGIC FOR ALL ROLES 🌟
             const userData = docSnap.data();
+            
             if (userData.role === "admin") {
-                window.location.href = "admin/admin.html";
-            } else {
-                window.location.href = "student/dashboard.html";
+                window.location.href = "admin/admin.html"; // Owner/Principal
+            } 
+            else if (userData.role === "teacher" || userData.role === "staff") {
+                window.location.href = "admin/teacher-dashboard.html"; // Staff & Teachers
+            } 
+            else {
+                window.location.href = "student/dashboard.html"; // Students
             }
+
         } catch (err) {
             showError(err.message);
         }
@@ -202,3 +206,4 @@
 </script>
 </body>
 </html>
+                        
