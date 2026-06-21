@@ -5,40 +5,97 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Submit Complaint</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-gray-50 p-4">
+<body class="bg-gray-50 p-4 font-sans">
 
-<div class="max-w-md mx-auto bg-white rounded-2xl shadow-sm p-6">
-    <h2 class="text-xl font-bold text-gray-800 mb-6">Submit Complaint</h2>
-    <div class="space-y-4">
-        <input type="text" id="compTitle" placeholder="Subject" class="w-full p-3 border rounded-xl outline-none">
-        <textarea id="compDesc" placeholder="Write your concern here..." class="w-full p-3 border rounded-xl outline-none h-32"></textarea>
-        
-        <button id="sendCompBtn" class="w-full bg-red-600 text-white font-bold py-3 rounded-xl hover:bg-red-700 transition">
-            Send to Admin
+<div class="max-w-md mx-auto">
+    <div class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm mb-6">
+        <button onclick="window.history.back()" class="text-gray-500 hover:text-red-600 transition">
+            <i class="fas fa-arrow-left text-xl"></i>
         </button>
+        <h1 class="text-xl font-bold text-gray-800">Support & Complaints</h1>
+        <div></div>
+    </div>
+
+    <div class="bg-white rounded-3xl shadow-sm p-6 border border-gray-100">
+        <div class="text-center mb-6">
+            <div class="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-3">
+                <i class="fas fa-hands-helping"></i>
+            </div>
+            <h2 class="text-lg font-bold text-gray-800">How can we help you?</h2>
+            <p class="text-xs text-gray-500 mt-1">Your concern will be directly sent to your school Admin securely.</p>
+        </div>
+
+        <form id="complaintForm" class="space-y-4" onsubmit="return false;">
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1">Subject / Topic <span class="text-red-500">*</span></label>
+                <input type="text" id="compTitle" required placeholder="e.g. Issue with Fees, Bus delay, etc." class="w-full p-3.5 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-red-500 bg-gray-50">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1">Describe your concern <span class="text-red-500">*</span></label>
+                <textarea id="compDesc" required placeholder="Write your problem in detail here..." class="w-full p-3.5 border border-gray-200 rounded-xl outline-none h-32 focus:ring-2 focus:ring-red-500 bg-gray-50 resize-none"></textarea>
+            </div>
+            
+            <button type="submit" id="sendCompBtn" class="w-full bg-red-600 text-white font-bold py-4 rounded-xl hover:bg-red-700 shadow-md transition flex justify-center items-center mt-2 text-lg">
+                <i class="fas fa-paper-plane mr-2"></i> Submit to Admin
+            </button>
+        </form>
     </div>
 </div>
 
 <script type="module">
     import { auth, db } from '../js/firebase-init.js';
-    import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    import { collection, addDoc, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
-    document.getElementById('sendCompBtn').addEventListener('click', async () => {
+    let studentData = null;
+
+    // 1. Fetch User Data to get School ID
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            if (userDoc.exists()) {
+                studentData = userDoc.data();
+            }
+        } else {
+            window.location.href = "../index.html";
+        }
+    });
+
+    // 2. Submit Logic with School ID Filter
+    document.getElementById('complaintForm').addEventListener('submit', async () => {
         const title = document.getElementById('compTitle').value;
         const desc = document.getElementById('compDesc').value;
-        const user = auth.currentUser;
+        const btn = document.getElementById('sendCompBtn');
 
-        if(!title || !desc) return alert("Please fill all details");
+        if(!studentData || !studentData.schoolId) {
+            return alert("Profile incomplete. Missing School ID. Please contact admin.");
+        }
 
-        await addDoc(collection(db, "complaints"), {
-            title, desc, 
-            studentName: user.email, 
-            status: "pending", 
-            createdAt: serverTimestamp()
-        });
-        alert("Complaint Submitted Successfully!");
-        window.location.reload();
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Sending...';
+
+        try {
+            await addDoc(collection(db, "complaints"), {
+                schoolId: studentData.schoolId, // NAYA: School Filter Added!
+                title: title, 
+                desc: desc, 
+                studentName: studentData.name || studentData.firstName || auth.currentUser.email, 
+                studentId: auth.currentUser.uid,
+                studentClass: studentData.class || "N/A",
+                status: "pending", 
+                createdAt: serverTimestamp()
+            });
+            
+            alert("Complaint Submitted Successfully! Admin will check it soon.");
+            window.location.href = "dashboard.html";
+        } catch(e) {
+            alert("Error saving complaint: " + e.message);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Submit to Admin';
+        }
     });
 </script>
 </body>
