@@ -3,35 +3,177 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Results</title>
+    <title>Add Result Manually</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-gray-50 p-4">
+<body class="bg-gray-50 p-4 font-sans pb-20">
 
-<div class="max-w-md mx-auto bg-white rounded-2xl shadow-sm p-6">
-    <h2 class="text-xl font-bold text-gray-800 mb-6">Add Student Result</h2>
-    <div class="space-y-4">
-        <input type="text" id="resStudentId" placeholder="Student Name / ID" class="w-full p-3 border rounded-xl outline-none">
-        <input type="text" id="resSubject" placeholder="Subject" class="w-full p-3 border rounded-xl outline-none">
-        <input type="number" id="resMarks" placeholder="Marks Obtained" class="w-full p-3 border rounded-xl outline-none">
-        
-        <button id="saveResultBtn" class="w-full bg-teal-600 text-white font-bold py-3 rounded-xl hover:bg-teal-700 transition">
-            Save Result
+<div class="max-w-md mx-auto">
+    <div class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm mb-4">
+        <button onclick="window.history.back()" class="text-gray-500 hover:text-teal-600 transition">
+            <i class="fas fa-arrow-left text-xl"></i>
         </button>
+        <h1 class="text-xl font-bold text-gray-800">Add Result Manually</h1>
+        <div></div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm p-6 border-t-4 border-teal-500">
+        <p class="text-xs text-gray-400 mb-4">Use this only for results entered by hand. Results from students taking the test online are saved automatically — you don't need to add those here.</p>
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1">Select Test *</label>
+                <select id="testSelector" class="w-full p-3 border border-gray-200 rounded-xl outline-none bg-gray-50 focus:ring-2 focus:ring-teal-500">
+                    <option value="">-- Loading Tests --</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1">Select Student *</label>
+                <select id="studentSelector" class="w-full p-3 border border-gray-200 rounded-xl outline-none bg-gray-50 focus:ring-2 focus:ring-teal-500">
+                    <option value="">-- Select a test first --</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1">Marks Obtained *</label>
+                <input type="number" id="resMarks" placeholder="e.g., 8" min="0" class="w-full p-3 border border-gray-200 rounded-xl outline-none bg-gray-50 focus:ring-2 focus:ring-teal-500">
+                <p class="text-xs text-gray-400 mt-1" id="totalQHint"></p>
+            </div>
+
+            <button id="saveResultBtn" class="w-full bg-teal-600 text-white font-bold py-3 rounded-xl hover:bg-teal-700 transition disabled:opacity-50">
+                <i class="fas fa-save mr-2"></i>Save Result
+            </button>
+        </div>
     </div>
 </div>
 
 <script type="module">
-    import { db } from '../js/firebase-init.js';
-    import { collection, addDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    import { auth, db } from '../js/firebase-init.js';
+    import { collection, addDoc, getDoc, getDocs, doc, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
-    document.getElementById('saveResultBtn').addEventListener('click', async () => {
-        const student = document.getElementById('resStudentId').value;
-        const subject = document.getElementById('resSubject').value;
-        const marks = document.getElementById('resMarks').value;
+    const testSelector = document.getElementById('testSelector');
+    const studentSelector = document.getElementById('studentSelector');
+    const resMarks = document.getElementById('resMarks');
+    const totalQHint = document.getElementById('totalQHint');
+    const saveBtn = document.getElementById('saveResultBtn');
 
-        await addDoc(collection(db, "results"), { student, subject, marks });
-        alert("Result Saved!");
+    let adminSchoolId = null;
+    let allTests = [];
+    let allStudents = [];
+    let selectedTest = null;
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            const adminDoc = await getDoc(doc(db, "users", user.uid));
+            if (adminDoc.exists()) {
+                adminSchoolId = adminDoc.data().schoolId;
+                loadTests();
+                loadStudents();
+            }
+        } else {
+            window.location.href = "../index.html";
+        }
+    });
+
+    async function loadTests() {
+        try {
+            const q = query(collection(db, "tests"), where("schoolId", "==", adminSchoolId), orderBy("createdAt", "desc"));
+            const snap = await getDocs(q);
+            allTests = [];
+            if (snap.empty) {
+                testSelector.innerHTML = `<option value="">No tests published yet</option>`;
+                return;
+            }
+            testSelector.innerHTML = `<option value="">-- Choose a Test --</option>`;
+            snap.forEach((docSnap) => {
+                const data = docSnap.data();
+                allTests.push({ id: docSnap.id, ...data });
+                testSelector.innerHTML += `<option value="${docSnap.id}">${data.title} (Class ${data.targetClass})</option>`;
+            });
+        } catch (error) {
+            console.error("Error loading tests:", error);
+            testSelector.innerHTML = `<option value="">Error loading tests - check console</option>`;
+        }
+    }
+
+    async function loadStudents() {
+        try {
+            const q = query(collection(db, "users"), where("role", "==", "student"), where("schoolId", "==", adminSchoolId));
+            const snap = await getDocs(q);
+            allStudents = [];
+            snap.forEach((docSnap) => {
+                allStudents.push({ id: docSnap.id, ...docSnap.data() });
+            });
+        } catch (error) {
+            console.error("Error loading students:", error);
+        }
+    }
+
+    testSelector.addEventListener('change', () => {
+        const testId = testSelector.value;
+        selectedTest = allTests.find(t => t.id === testId) || null;
+
+        if (!selectedTest) {
+            studentSelector.innerHTML = `<option value="">-- Select a test first --</option>`;
+            totalQHint.innerText = "";
+            return;
+        }
+
+        totalQHint.innerText = `Out of ${selectedTest.totalQuestions} questions`;
+        resMarks.max = selectedTest.totalQuestions;
+
+        const classStudents = allStudents.filter(s => String(s.class) === String(selectedTest.targetClass));
+        if (classStudents.length === 0) {
+            studentSelector.innerHTML = `<option value="">No students found in Class ${selectedTest.targetClass}</option>`;
+            return;
+        }
+        studentSelector.innerHTML = `<option value="">-- Choose a Student --</option>`;
+        classStudents.forEach((s) => {
+            const label = s.name || s.firstName || 'Unnamed Student';
+            studentSelector.innerHTML += `<option value="${s.id}">${label}</option>`;
+        });
+    });
+
+    saveBtn.addEventListener('click', async () => {
+        const studentId = studentSelector.value;
+        const marks = parseInt(resMarks.value);
+
+        if (!selectedTest) return alert("Please select a test.");
+        if (!studentId) return alert("Please select a student.");
+        if (isNaN(marks) || marks < 0) return alert("Please enter valid marks.");
+        if (marks > selectedTest.totalQuestions) return alert(`Marks cannot exceed ${selectedTest.totalQuestions}.`);
+
+        const student = allStudents.find(s => s.id === studentId);
+        const studentName = student ? (student.name || student.firstName || 'Unnamed Student') : 'Unnamed Student';
+
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Saving...';
+
+        try {
+            await addDoc(collection(db, "results"), {
+                studentId: studentId,
+                studentName: studentName,
+                testId: selectedTest.id,
+                testTitle: selectedTest.title,
+                schoolId: adminSchoolId,
+                score: marks,
+                totalQuestions: selectedTest.totalQuestions,
+                manualEntry: true,
+                timestamp: serverTimestamp()
+            });
+            alert("Result saved successfully!");
+            resMarks.value = "";
+            studentSelector.value = "";
+        } catch (error) {
+            console.error("Error saving result:", error);
+            alert("Error saving result: " + error.message);
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Save Result';
+        }
     });
 </script>
 </body>
