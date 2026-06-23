@@ -71,8 +71,8 @@
     import { collection, addDoc, getDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
-    // Aapka Wistia API Password (lowercase 'c' ke sath)
-    const WISTIA_API_PASSWORD = "cdd0acb94d045a539e14e162c96c2d8bc29f6ab7cb29ae9689c2defcce7c9b04";
+    // Wistia Access Token (Bearer) - api_password ab deprecated hai, naya token Wistia Account > Settings > API Access se banao
+    const WISTIA_ACCESS_TOKEN = "52e25c62ca626beb4dc90b4c6207ebc45861e5de7e6569d99c6ee0fe06b6b286";
 
     let adminSchoolId = null;
     const form = document.getElementById('videoForm');
@@ -121,6 +121,7 @@
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             xhr.open('POST', 'https://upload.wistia.com/');
+            xhr.setRequestHeader('Authorization', 'Bearer ' + WISTIA_ACCESS_TOKEN);
 
             xhr.upload.onprogress = (event) => {
                 if (event.lengthComputable) {
@@ -138,12 +139,14 @@
                     } catch (err) {
                         reject(new Error("Invalid response from Wistia"));
                     }
+                } else if (xhr.status === 401 || xhr.status === 403) {
+                    reject(new Error("Auth failed (401/403) - check your Wistia Access Token / permissions"));
                 } else {
-                    reject(new Error("Wistia Error: " + xhr.responseText));
+                    reject(new Error("Wistia Error (" + xhr.status + "): " + xhr.responseText));
                 }
             };
 
-            xhr.onerror = () => reject(new Error("Network error during upload"));
+            xhr.onerror = () => reject(new Error("Network/CORS error - request never reached Wistia or was blocked"));
 
             xhr.send(formData);
         });
@@ -172,7 +175,6 @@
 
         try {
             const formData = new FormData();
-            formData.append('api_password', WISTIA_API_PASSWORD);
             formData.append('file', file); // ✅ FIX: real File object
             formData.append('name', title);
 
