@@ -20,14 +20,12 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* Smooth shadow for white cards */
         .glass-card {
             background: #ffffff;
             box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
             border: 1px solid rgba(226, 232, 240, 0.8);
         }
 
-        /* Hero Gradient */
         .premium-gradient {
             background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
         }
@@ -42,18 +40,21 @@
 
 <div class="max-w-md mx-auto min-h-screen relative">
 
-    <!-- Top Header -->
     <div class="flex justify-between items-center px-6 pt-8 pb-2">
         <div>
             <p class="text-sm text-slate-500 font-medium" id="greetingMsg">Good Morning,</p>
-            <h1 class="text-2xl font-bold text-slate-900 tracking-tight truncate w-56" id="studentName">Loading...</h1>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight truncate w-48" id="studentName">Loading...</h1>
         </div>
-        <div class="w-12 h-12 rounded-full overflow-hidden bg-slate-200 shadow-sm shrink-0 border border-slate-200">
-            <img id="profilePhoto" src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" class="w-full h-full object-cover">
+        <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-full overflow-hidden bg-slate-200 shadow-sm shrink-0 border border-slate-200">
+                <img id="profilePhoto" src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" class="w-full h-full object-cover">
+            </div>
+            <button id="logoutBtn" class="w-9 h-9 flex items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-100 transition shadow-sm border border-red-100">
+                <i class="fas fa-power-off text-sm"></i>
+            </button>
         </div>
     </div>
 
-    <!-- Premium Dashboard Card -->
     <div class="px-5 mt-4">
         <div class="premium-gradient rounded-[24px] p-6 text-white shadow-xl shadow-indigo-900/20 relative overflow-hidden">
             <div class="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-white opacity-5 blur-2xl"></div>
@@ -70,8 +71,10 @@
             </div>
 
             <div class="relative z-10 flex justify-between items-end border-t border-white/10 pt-4 mt-2">
-                <div>
-                    <p class="text-indigo-200 text-[10px] font-bold uppercase tracking-wider mb-1">Attendance</p>
+                <div onclick="window.location.href='attendance.html'" class="cursor-pointer active:scale-95 transition bg-white/5 px-2 py-1 -ml-2 rounded-lg">
+                    <p class="text-indigo-200 text-[10px] font-bold uppercase tracking-wider mb-1 flex items-center gap-1">
+                        Attendance <i class="fas fa-chevron-right text-[8px]"></i>
+                    </p>
                     <p class="text-2xl font-black" id="statAttendance">--%</p>
                 </div>
                 <div class="text-right">
@@ -82,12 +85,10 @@
         </div>
     </div>
 
-    <!-- Quick Access Grid (With Show More Logic) -->
     <div class="px-5 mt-8">
         <h2 class="text-base font-bold text-slate-800 mb-4 px-1">Quick Access</h2>
         <div class="grid grid-cols-4 gap-y-5 gap-x-4" id="quickAccessGrid">
             
-            <!-- 1. Live Class -->
             <div onclick="window.location.href='live-classes.html'" class="flex flex-col items-center gap-2 app-btn cursor-pointer">
                 <div class="w-14 h-14 rounded-[18px] glass-card flex items-center justify-center text-red-500 text-xl">
                     <i class="fas fa-video"></i>
@@ -95,7 +96,6 @@
                 <span class="text-[9.5px] font-bold text-slate-600 text-center">Live Class</span>
             </div>
 
-            <!-- 2. Materials -->
             <div onclick="window.location.href='materials.html'" class="flex flex-col items-center gap-2 app-btn cursor-pointer">
                 <div class="w-14 h-14 rounded-[18px] glass-card flex items-center justify-center text-blue-500 text-xl">
                     <i class="fas fa-book-open"></i>
@@ -103,7 +103,6 @@
                 <span class="text-[9.5px] font-bold text-slate-600 text-center">Materials</span>
             </div>
 
-            <!-- 3. Homework -->
             <div onclick="window.location.href='assignments.html'" class="flex flex-col items-center gap-2 app-btn cursor-pointer relative">
                 <span id="statAssignmentsBadge" class="absolute -top-1 right-1 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full hidden border-2 border-slate-50 shadow-sm z-10">0</span>
                 <div class="w-14 h-14 rounded-[18px] glass-card flex items-center justify-center text-emerald-500 text-xl">
@@ -112,7 +111,6 @@
                 <span class="text-[9.5px] font-bold text-slate-600 text-center">Homework</span>
             </div>
 
-            <!-- 4. Tests -->
             <div onclick="window.location.href='tests.html'" class="flex flex-col items-center gap-2 app-btn cursor-pointer relative">
                 <span id="statTestsBadge" class="absolute -top-1 right-1 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full hidden border-2 border-slate-50 shadow-sm z-10">0</span>
                 <div class="w-14 h-14 rounded-[18px] glass-card flex items-center justify-center text-purple-500 text-xl">
@@ -121,7 +119,6 @@
                 <span class="text-[9.5px] font-bold text-slate-600 text-center">Tests</span>
             </div>
 
-            <!-- 5. Results -->
             <div onclick="window.location.href='results.html'" class="flex flex-col items-center gap-2 app-btn cursor-pointer">
                 <div class="w-14 h-14 rounded-[18px] glass-card flex items-center justify-center text-amber-500 text-xl">
                     <i class="fas fa-trophy"></i>
@@ -129,7 +126,6 @@
                 <span class="text-[9.5px] font-bold text-slate-600 text-center">Results</span>
             </div>
             
-            <!-- 6. Fees -->
             <div onclick="window.location.href='fees.html'" class="flex flex-col items-center gap-2 app-btn cursor-pointer">
                 <div class="w-14 h-14 rounded-[18px] glass-card flex items-center justify-center text-teal-600 text-xl">
                     <i class="fas fa-wallet"></i>
@@ -137,7 +133,6 @@
                 <span class="text-[9.5px] font-bold text-slate-600 text-center">Fees</span>
             </div>
 
-            <!-- 7. Leave -->
             <div onclick="window.location.href='leave.html'" class="flex flex-col items-center gap-2 app-btn cursor-pointer">
                 <div class="w-14 h-14 rounded-[18px] glass-card flex items-center justify-center text-green-600 text-xl">
                     <i class="fas fa-calendar-check"></i>
@@ -145,7 +140,6 @@
                 <span class="text-[9.5px] font-bold text-slate-600 text-center">Leave</span>
             </div>
 
-            <!-- 8. More Button -->
             <div id="viewAllBtn" onclick="showAllIcons()" class="flex flex-col items-center gap-2 app-btn cursor-pointer">
                 <div class="w-14 h-14 rounded-[18px] bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 text-xl transition hover:bg-slate-100">
                     <i class="fas fa-ellipsis-h"></i>
@@ -153,7 +147,6 @@
                 <span class="text-[9.5px] font-bold text-slate-600 text-center">More</span>
             </div>
 
-            <!-- HIDDEN EXTRA ICONS -->
             <div onclick="window.location.href='timetable.html'" class="hidden extra-icon flex flex-col items-center gap-2 app-btn cursor-pointer">
                 <div class="w-14 h-14 rounded-[18px] glass-card flex items-center justify-center text-indigo-500 text-xl">
                     <i class="fas fa-calendar-alt"></i>
@@ -185,7 +178,6 @@
         </div>
     </div>
 
-    <!-- Latest Announcement -->
     <div class="px-5 mt-10">
         <div class="flex justify-between items-end mb-4 px-1">
             <h2 class="text-base font-bold text-slate-800">Notice Board</h2>
@@ -198,7 +190,6 @@
         </div>
     </div>
 
-    <!-- Today's Classes -->
     <div class="px-5 mt-8 mb-6">
         <h2 class="text-base font-bold text-slate-800 mb-4 px-1">Today's Schedule</h2>
         <div id="scheduleContainer" class="space-y-3">
@@ -208,7 +199,6 @@
         </div>
     </div>
 
-    <!-- Clean Bottom Navigation -->
     <div class="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-slate-100 flex justify-around items-center pt-3 pb-5 z-50 px-2 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
         <button class="flex flex-col items-center gap-1.5 w-16 text-indigo-600">
             <i class="fas fa-home text-lg"></i>
@@ -230,7 +220,6 @@
 
 </div>
 
-<!-- UI Toggle Logic -->
 <script>
     window.showAllIcons = () => {
         document.getElementById('viewAllBtn').classList.add('hidden');
@@ -241,11 +230,11 @@
     };
 </script>
 
-<!-- Firebase Backend Logic -->
 <script type="module">
     import { auth, db } from '../js/firebase-init.js';
     import { doc, getDoc, collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
-    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+    // FIXED: signOut added below
+    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
     const hour = new Date().getHours();
     document.getElementById('greetingMsg').innerText = hour < 12 ? 'Good Morning,' : (hour < 18 ? 'Good Afternoon,' : 'Good Evening,');
@@ -276,7 +265,7 @@
 
                 const targetClassStr = String(userData.class || "");
 
-                // A. Assignments (With Notification Badge)
+                // Assignments
                 const assignQuery = query(collection(db, "assignments"), where("schoolId", "==", schoolId));
                 onSnapshot(assignQuery, (snapshot) => {
                     let filteredAssigns = snapshot.docs.filter(d => String(d.data().targetClass || d.data().className || "") === targetClassStr);
@@ -290,7 +279,7 @@
                     }
                 });
 
-                // B. Live Classes Loader
+                // Live Classes
                 const classQuery = query(collection(db, "live_classes"), where("schoolId", "==", schoolId));
                 onSnapshot(classQuery, (snapshot) => {
                     const scheduleContainer = document.getElementById('scheduleContainer');
@@ -322,7 +311,7 @@
                     }
                 });
 
-                // C. Notices Load Fix
+                // Notices
                 const noticeQuery = query(collection(db, "announcements"), where("schoolId", "==", schoolId));
                 onSnapshot(noticeQuery, (snapshot) => {
                     const noticeContainer = document.getElementById('announcementContainer');
@@ -332,7 +321,7 @@
                         let allNotices = [...snapshot.docs];
                         allNotices.sort((a, b) => (b.data().createdAt?.toMillis() || 0) - (a.data().createdAt?.toMillis() || 0));
                         
-                        const data = allNotices[0].data(); 
+                        const data = allNotices.data(); 
                         noticeContainer.innerHTML = `
                             <div class="glass-card p-4 rounded-[20px] flex items-start gap-4 border-l-4 border-l-amber-400">
                                 <div class="w-10 h-10 rounded-[14px] bg-amber-50 flex items-center justify-center shrink-0 text-amber-500">
@@ -347,7 +336,7 @@
                     }
                 });
 
-                // D. Attendance Load
+                // Attendance Load
                 const attQuery = query(collection(db, "attendance"), where("studentEmail", "==", user.email), where("schoolId", "==", schoolId));
                 onSnapshot(attQuery, (snapshot) => {
                     let presentCount = 0;
@@ -368,8 +357,19 @@
             window.location.href = "../index.html"; 
         }
     });
+
+    // FIXED: Logout Button Logic Added Back
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+        if(confirm("Are you sure you want to log out?")) {
+            try {
+                await signOut(auth);
+                window.location.href = "../index.html";
+            } catch(error) {
+                console.error("Logout Error:", error);
+                alert("Failed to log out. Please try again.");
+            }
+        }
+    });
 </script>
 </body>
 </html>
-
-    
