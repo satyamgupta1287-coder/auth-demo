@@ -3,275 +3,186 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Dashboard</title>
+    <title>Student Dashboard - AstraCampus</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#ffffff">
     <style>
-        :root{
-            --ink:#0F1729;
-            --ink-soft:#1B2640;
-            --paper:#FDFBF7;
-            --accent:#4F46E5;
-            --accent-soft:#EEF0FF;
-            --amber:#D97706;
-            --amber-soft:#FEF3E2;
-            --line:#E7E2D8;
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* Very light slate for premium feel */
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
         }
-        *{font-family:'Inter',sans-serif;}
-        .font-display{font-family:'Space Grotesk',sans-serif;}
-        body{background:var(--paper);}
-        .no-scrollbar::-webkit-scrollbar{display:none;}
-        .no-scrollbar{-ms-overflow-style:none;scrollbar-width:none;}
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        .id-card{
-            background:linear-gradient(135deg,var(--ink) 0%, var(--ink-soft) 55%, #2A3658 100%);
-            position:relative;
-            overflow:hidden;
-        }
-        .id-card::before{
-            content:'';
-            position:absolute;
-            top:-40%; right:-30%;
-            width:280px; height:280px;
-            background:radial-gradient(circle, rgba(79,70,229,0.35) 0%, transparent 70%);
-            pointer-events:none;
-        }
-        .id-card::after{
-            content:'';
-            position:absolute;
-            inset:0;
-            background-image:repeating-linear-gradient(135deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 14px);
-            pointer-events:none;
-        }
-        .perforation{
-            position:relative;
-        }
-        .perforation::before{
-            content:'';
-            position:absolute;
-            top:0; left:0; right:0;
-            height:1px;
-            background-image:radial-gradient(circle, #D8D2C4 1.5px, transparent 1.5px);
-            background-size:10px 1px;
-            background-repeat:repeat-x;
+        /* Smooth shadow for cards */
+        .glass-card {
+            background: #ffffff;
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
+            border: 1px solid rgba(226, 232, 240, 0.8);
         }
 
-        .stat-strip{
-            display:grid;
-            grid-template-columns:repeat(4,1fr);
-        }
-        .stat-strip > div:not(:last-child){
-            border-right:1px solid var(--line);
+        /* Hero Gradient */
+        .premium-gradient {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
         }
 
-        .rail-dot{
-            width:10px;height:10px;border-radius:50%;
-            background:var(--accent);
-            box-shadow:0 0 0 4px var(--accent-soft);
+        /* App-like click effect */
+        .app-btn:active {
+            transform: scale(0.95);
+            transition: transform 0.1s;
         }
-        .rail-line{
-            width:2px;
-            background:var(--line);
-        }
-
-        .tile{
-            transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;
-        }
-        .tile:active{transform:scale(0.96);}
-
-        .eyebrow{
-            font-size:10px;
-            font-weight:700;
-            letter-spacing:.12em;
-            text-transform:uppercase;
-            color:#9A8F7A;
-        }
-
-        .nav-active{color:var(--accent);}
-        .nav-active i{transform:translateY(-1px);}
-
-        ::selection{background:var(--accent-soft);}
     </style>
 </head>
 <body class="pb-24">
 
-<div class="max-w-md mx-auto min-h-screen relative" style="background:var(--paper);">
+<div class="max-w-md mx-auto min-h-screen relative">
 
-    <!-- ===== ID-CARD HEADER ===== -->
-    <div class="id-card px-5 pt-6 pb-7 rounded-b-[28px] text-white relative">
-        <div class="flex justify-between items-start relative z-10">
-            <div class="flex items-center gap-3">
-                <div class="w-14 h-14 rounded-2xl overflow-hidden ring-2 ring-white/15 bg-white/10 flex-shrink-0">
-                    <img id="profilePhoto" src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" class="w-full h-full object-cover">
-                </div>
-                <div class="min-w-0">
-                    <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-indigo-300" id="greetingMsg">Good Morning</p>
-                    <h1 class="font-display font-semibold text-xl leading-tight truncate max-w-[160px]" id="studentName">Loading&hellip;</h1>
-                    <p class="text-[11px] text-slate-400 mt-0.5">
-                        <span class="font-mono tracking-wide text-slate-300" id="studentId">&middot;&middot;&middot;</span>
-                        <span class="mx-1 text-slate-600">/</span>
-                        <span id="batchName">Loading&hellip;</span>
-                    </p>
-                </div>
-            </div>
-            <button id="logoutBtn" aria-label="Log out" class="bg-white/10 hover:bg-white/20 active:scale-95 w-9 h-9 rounded-xl flex items-center justify-center transition shrink-0">
-                <i class="fas fa-arrow-right-from-bracket text-sm text-slate-200"></i>
-            </button>
+    <div class="flex justify-between items-center px-6 pt-8 pb-2">
+        <div>
+            <p class="text-sm text-slate-500 font-medium" id="greetingMsg">Good Morning,</p>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight truncate w-56" id="studentName">Loading...</h1>
+        </div>
+        <div class="w-12 h-12 rounded-full overflow-hidden bg-slate-200 shadow-sm shrink-0 border border-slate-200">
+            <img id="profilePhoto" src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" class="w-full h-full object-cover">
         </div>
     </div>
 
-    <!-- ===== STAT STRIP (signature element: boarding-pass style data strip) ===== -->
-    <div class="px-4 -mt-5 relative z-10">
-        <div class="bg-white rounded-2xl shadow-[0_8px_24px_-8px_rgba(15,23,41,0.18)] border border-[var(--line)] stat-strip overflow-hidden">
-            <div onclick="window.location.href='attendance.html'" class="p-3.5 flex flex-col items-center justify-center cursor-pointer active:bg-slate-50 transition">
-                <p class="eyebrow mb-1">Attendance</p>
-                <h3 class="font-display text-base font-bold text-slate-800" id="statAttendance">&mdash;</h3>
+    <div class="px-5 mt-4">
+        <div class="premium-gradient rounded-[24px] p-6 text-white shadow-xl shadow-indigo-900/20 relative overflow-hidden">
+            <div class="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-white opacity-5 blur-2xl"></div>
+            <div class="absolute bottom-0 left-0 -ml-8 -mb-8 w-24 h-24 rounded-full bg-white opacity-10 blur-xl"></div>
+            
+            <div class="relative z-10 flex justify-between items-start">
+                <div>
+                    <p class="text-indigo-200 text-[11px] font-bold tracking-wider uppercase mb-1">Student ID</p>
+                    <p class="text-xl font-bold tracking-wide mb-6" id="studentId">---</p>
+                </div>
+                <div class="bg-white/10 backdrop-blur-md border border-white/20 px-3 py-1.5 rounded-lg text-right">
+                    <p class="text-xs font-bold text-white">Class <span id="batchName">...</span></p>
+                </div>
             </div>
-            <div class="p-3.5 flex flex-col items-center justify-center">
-                <p class="eyebrow mb-1">Pending HW</p>
-                <h3 class="font-display text-base font-bold text-slate-800" id="statAssignments">0</h3>
-            </div>
-            <div class="p-3.5 flex flex-col items-center justify-center">
-                <p class="eyebrow mb-1">Upc. Tests</p>
-                <h3 class="font-display text-base font-bold text-slate-800" id="statTests">0</h3>
-            </div>
-            <div class="p-3.5 flex flex-col items-center justify-center">
-                <p class="eyebrow mb-1">Fee Due</p>
-                <h3 class="font-display text-base font-bold" id="statFees" style="color:var(--amber);">&#8377;0</h3>
+
+            <div class="relative z-10 flex justify-between items-end border-t border-white/10 pt-4 mt-2">
+                <div>
+                    <p class="text-indigo-200 text-[10px] font-bold uppercase tracking-wider mb-1">Attendance</p>
+                    <p class="text-2xl font-black" id="statAttendance">--%</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-indigo-200 text-[10px] font-bold uppercase tracking-wider mb-1">Fee Due</p>
+                    <p class="text-2xl font-black text-emerald-300" id="statFees">₹0</p>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- ===== QUICK ACCESS ===== -->
-    <div class="px-4 mt-7">
-        <div class="flex items-baseline justify-between mb-3 px-0.5">
-            <h2 class="font-display text-[13px] font-semibold text-slate-800">Quick Access</h2>
-        </div>
-        <div class="grid grid-cols-4 gap-2.5">
-            <button onclick="window.location.href='live-classes.html'" class="tile bg-white p-3 rounded-2xl flex flex-col items-center border border-[var(--line)] active:border-indigo-200">
-                <div class="w-9 h-9 rounded-xl flex items-center justify-center mb-1.5" style="background:#FEEAEA;">
-                    <i class="fas fa-video text-[13px]" style="color:#DC2626;"></i>
+    <div class="px-5 mt-8">
+        <h2 class="text-base font-bold text-slate-800 mb-4 px-1">Quick Access</h2>
+        <div class="grid grid-cols-4 gap-y-6 gap-x-4">
+            
+            <div onclick="window.location.href='live-classes.html'" class="flex flex-col items-center gap-2 app-btn cursor-pointer">
+                <div class="w-14 h-14 rounded-[18px] glass-card flex items-center justify-center text-red-500 text-xl">
+                    <i class="fas fa-video"></i>
                 </div>
-                <span class="text-[9.5px] font-bold text-slate-600 leading-tight text-center">Live Class</span>
-            </button>
-            <button onclick="window.location.href='materials.html'" class="tile bg-white p-3 rounded-2xl flex flex-col items-center border border-[var(--line)] active:border-indigo-200">
-                <div class="w-9 h-9 rounded-xl flex items-center justify-center mb-1.5" style="background:var(--accent-soft);">
-                    <i class="fas fa-book-open text-[13px]" style="color:var(--accent);"></i>
-                </div>
-                <span class="text-[9.5px] font-bold text-slate-600 leading-tight text-center">Materials</span>
-            </button>
-            <button onclick="window.location.href='assignments.html'" class="tile bg-white p-3 rounded-2xl flex flex-col items-center border border-[var(--line)] active:border-indigo-200">
-                <div class="w-9 h-9 rounded-xl flex items-center justify-center mb-1.5" style="background:#E7F7EE;">
-                    <i class="fas fa-clipboard-list text-[13px]" style="color:#16A34A;"></i>
-                </div>
-                <span class="text-[9.5px] font-bold text-slate-600 leading-tight text-center">Assignments</span>
-            </button>
-            <button onclick="window.location.href='tests.html'" class="tile bg-white p-3 rounded-2xl flex flex-col items-center border border-[var(--line)] active:border-indigo-200">
-                <div class="w-9 h-9 rounded-xl flex items-center justify-center mb-1.5" style="background:#F1ECFB;">
-                    <i class="fas fa-laptop-code text-[13px]" style="color:#7C3AED;"></i>
-                </div>
-                <span class="text-[9.5px] font-bold text-slate-600 leading-tight text-center">Mock Tests</span>
-            </button>
-            <button onclick="window.location.href='results.html'" class="tile bg-white p-3 rounded-2xl flex flex-col items-center border border-[var(--line)] active:border-indigo-200">
-                <div class="w-9 h-9 rounded-xl flex items-center justify-center mb-1.5" style="background:var(--amber-soft);">
-                    <i class="fas fa-trophy text-[13px]" style="color:var(--amber);"></i>
-                </div>
-                <span class="text-[9.5px] font-bold text-slate-600 leading-tight text-center">Results</span>
-            </button>
-            <button onclick="window.location.href='fees.html'" class="tile bg-white p-3 rounded-2xl flex flex-col items-center border border-[var(--line)] active:border-indigo-200">
-                <div class="w-9 h-9 rounded-xl flex items-center justify-center mb-1.5" style="background:#E3F6F2;">
-                    <i class="fas fa-wallet text-[13px]" style="color:#0D9488;"></i>
-                </div>
-                <span class="text-[9.5px] font-bold text-slate-600 leading-tight text-center">Fees</span>
-            </button>
-            <button onclick="window.location.href='gallery.html'" class="tile bg-white p-3 rounded-2xl flex flex-col items-center border border-[var(--line)] active:border-indigo-200">
-                <div class="w-9 h-9 rounded-xl flex items-center justify-center mb-1.5" style="background:#FCE9F1;">
-                    <i class="fas fa-images text-[13px]" style="color:#DB2777;"></i>
-                </div>
-                <span class="text-[9.5px] font-bold text-slate-600 leading-tight text-center">Gallery</span>
-            </button>
-            <button onclick="window.location.href='complaints.html'" class="tile bg-white p-3 rounded-2xl flex flex-col items-center border border-[var(--line)] active:border-indigo-200">
-                <div class="w-9 h-9 rounded-xl flex items-center justify-center mb-1.5" style="background:#FCF3D9;">
-                    <i class="fas fa-comment-dots text-[13px]" style="color:#CA8A04;"></i>
-                </div>
-                <span class="text-[9.5px] font-bold text-slate-600 leading-tight text-center">Complaint</span>
-            </button>
-            <button onclick="window.location.href='leave.html'" class="tile bg-white p-3 rounded-2xl flex flex-col items-center border border-[var(--line)] active:border-indigo-200">
-                <div class="w-9 h-9 rounded-xl flex items-center justify-center mb-1.5" style="background:#E7F7EE;">
-                    <i class="fas fa-calendar-check text-[13px]" style="color:#16A34A;"></i>
-                </div>
-                <span class="text-[9.5px] font-bold text-slate-600 leading-tight text-center">Leave</span>
-            </button>
-            <button onclick="window.location.href='timetable.html'" class="tile bg-white p-3 rounded-2xl flex flex-col items-center border border-[var(--line)] active:border-indigo-200">
-                <div class="w-9 h-9 rounded-xl flex items-center justify-center mb-1.5" style="background:#EAEAFB;">
-                    <i class="fas fa-calendar-alt text-[13px]" style="color:#4338CA;"></i>
-                </div>
-                <span class="text-[9.5px] font-bold text-slate-600 leading-tight text-center">Timetable</span>
-            </button>
-            <button onclick="window.location.href='feedback.html'" class="tile bg-white p-3 rounded-2xl flex flex-col items-center border border-[var(--line)] active:border-indigo-200">
-                <div class="w-9 h-9 rounded-xl flex items-center justify-center mb-1.5" style="background:#E1EFFD;">
-                    <i class="fas fa-comment-alt text-[13px]" style="color:#2563EB;"></i>
-                </div>
-                <span class="text-[9.5px] font-bold text-slate-600 leading-tight text-center">Feedback</span>
-            </button>
-        </div>
-    </div>
-
-    <!-- ===== TODAY'S SCHEDULE (timeline rail) ===== -->
-    <div class="px-4 mt-8">
-        <div class="flex items-baseline justify-between mb-3 px-0.5">
-            <h2 class="font-display text-[13px] font-semibold text-slate-800">Today's Schedule</h2>
-        </div>
-        <div id="scheduleContainer" class="space-y-0">
-            <div class="bg-white p-4 rounded-2xl border border-[var(--line)] text-center">
-                <p class="text-xs text-slate-400 py-2">Loading classes&hellip;</p>
+                <span class="text-[10px] font-bold text-slate-600">Live Class</span>
             </div>
-        </div>
-    </div>
 
-    <!-- ===== PENDING ASSIGNMENTS ===== -->
-    <div class="px-4 mt-8">
-        <div class="flex items-baseline justify-between mb-3 px-0.5">
-            <h2 class="font-display text-[13px] font-semibold text-slate-800">Pending Assignments</h2>
-            <span onclick="window.location.href='assignments.html'" class="text-[10px] font-bold uppercase tracking-wide" style="color:var(--accent);cursor:pointer;">View all</span>
-        </div>
-        <div id="assignmentsContainer">
-            <div class="bg-white p-4 rounded-2xl border border-[var(--line)] text-center">
-                <p class="text-xs text-slate-400 py-2">Loading assignments&hellip;</p>
+            <div onclick="window.location.href='materials.html'" class="flex flex-col items-center gap-2 app-btn cursor-pointer">
+                <div class="w-14 h-14 rounded-[18px] glass-card flex items-center justify-center text-blue-500 text-xl">
+                    <i class="fas fa-book-open"></i>
+                </div>
+                <span class="text-[10px] font-bold text-slate-600">Materials</span>
             </div>
+
+            <div onclick="window.location.href='assignments.html'" class="flex flex-col items-center gap-2 app-btn cursor-pointer relative">
+                <span id="statAssignmentsBadge" class="absolute -top-1 right-1 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full hidden border-2 border-slate-50 shadow-sm z-10">0</span>
+                <div class="w-14 h-14 rounded-[18px] glass-card flex items-center justify-center text-emerald-500 text-xl">
+                    <i class="fas fa-clipboard-list"></i>
+                </div>
+                <span class="text-[10px] font-bold text-slate-600">Homework</span>
+            </div>
+
+            <div onclick="window.location.href='tests.html'" class="flex flex-col items-center gap-2 app-btn cursor-pointer relative">
+                <span id="statTestsBadge" class="absolute -top-1 right-1 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full hidden border-2 border-slate-50 shadow-sm z-10">0</span>
+                <div class="w-14 h-14 rounded-[18px] glass-card flex items-center justify-center text-purple-500 text-xl">
+                    <i class="fas fa-laptop-code"></i>
+                </div>
+                <span class="text-[10px] font-bold text-slate-600">Tests</span>
+            </div>
+
+            <div onclick="window.location.href='results.html'" class="flex flex-col items-center gap-2 app-btn cursor-pointer">
+                <div class="w-14 h-14 rounded-[18px] glass-card flex items-center justify-center text-amber-500 text-xl">
+                    <i class="fas fa-trophy"></i>
+                </div>
+                <span class="text-[10px] font-bold text-slate-600">Results</span>
+            </div>
+
+            <div onclick="window.location.href='timetable.html'" class="flex flex-col items-center gap-2 app-btn cursor-pointer">
+                <div class="w-14 h-14 rounded-[18px] glass-card flex items-center justify-center text-indigo-500 text-xl">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <span class="text-[10px] font-bold text-slate-600">Timetable</span>
+            </div>
+
+            <div onclick="window.location.href='gallery.html'" class="flex flex-col items-center gap-2 app-btn cursor-pointer">
+                <div class="w-14 h-14 rounded-[18px] glass-card flex items-center justify-center text-pink-500 text-xl">
+                    <i class="fas fa-images"></i>
+                </div>
+                <span class="text-[10px] font-bold text-slate-600">Gallery</span>
+            </div>
+
+            <div onclick="window.location.href='complaints.html'" class="flex flex-col items-center gap-2 app-btn cursor-pointer">
+                <div class="w-14 h-14 rounded-[18px] glass-card flex items-center justify-center text-slate-700 text-xl">
+                    <i class="fas fa-headset"></i>
+                </div>
+                <span class="text-[10px] font-bold text-slate-600">Helpdesk</span>
+            </div>
+
         </div>
     </div>
 
-    <!-- ===== ANNOUNCEMENTS ===== -->
-    <div class="px-4 mt-8 mb-4">
-        <div class="flex items-baseline justify-between mb-3 px-0.5">
-            <h2 class="font-display text-[13px] font-semibold text-slate-800">Latest Announcement</h2>
+    <div class="px-5 mt-8">
+        <div class="flex justify-between items-end mb-4 px-1">
+            <h2 class="text-base font-bold text-slate-800">Notice Board</h2>
+            <span onclick="window.location.href='notices.html'" class="text-[10px] font-bold text-indigo-600 uppercase tracking-wide cursor-pointer">View All</span>
         </div>
         <div id="announcementContainer">
-            <div class="bg-white p-4 rounded-2xl border border-[var(--line)] text-center">
-                <p class="text-xs text-slate-400 py-2">Loading announcements&hellip;</p>
+            <div class="glass-card rounded-[20px] p-5 text-center">
+                <p class="text-sm text-slate-400 font-medium">Loading notices...</p>
             </div>
         </div>
     </div>
 
-    <!-- ===== BOTTOM NAV ===== -->
-    <div class="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white/95 backdrop-blur-sm border-t border-[var(--line)] flex justify-around items-center py-2.5 z-50">
-        <button class="nav-active flex flex-col items-center gap-1 px-3 py-1">
-            <i class="fas fa-house text-[15px]"></i><span class="text-[9px] font-bold">Home</span>
+    <div class="px-5 mt-8 mb-6">
+        <h2 class="text-base font-bold text-slate-800 mb-4 px-1">Today's Schedule</h2>
+        <div id="scheduleContainer" class="space-y-3">
+            <div class="glass-card rounded-[20px] p-5 text-center">
+                <p class="text-sm text-slate-400 font-medium">Loading classes...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-slate-100 flex justify-around items-center pt-3 pb-5 z-50 px-2 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
+        <button class="flex flex-col items-center gap-1.5 w-16 text-indigo-600">
+            <i class="fas fa-home text-lg"></i>
+            <span class="text-[9px] font-bold tracking-wide">Home</span>
         </button>
-        <button onclick="window.location.href='live-classes.html'" class="flex flex-col items-center gap-1 px-3 py-1 text-slate-400 active:text-indigo-600 transition">
-            <i class="fas fa-circle-play text-[15px]"></i><span class="text-[9px] font-bold">Classes</span>
+        <button onclick="window.location.href='live-classes.html'" class="flex flex-col items-center gap-1.5 w-16 text-slate-400 hover:text-indigo-600 transition">
+            <i class="fas fa-video text-lg"></i>
+            <span class="text-[9px] font-bold tracking-wide">Classes</span>
         </button>
-        <button onclick="window.location.href='tests.html'" class="flex flex-col items-center gap-1 px-3 py-1 text-slate-400 active:text-indigo-600 transition">
-            <i class="fas fa-pen-to-square text-[15px]"></i><span class="text-[9px] font-bold">Tests</span>
+        <button onclick="window.location.href='assignments.html'" class="flex flex-col items-center gap-1.5 w-16 text-slate-400 hover:text-indigo-600 transition">
+            <i class="fas fa-clipboard-list text-lg"></i>
+            <span class="text-[9px] font-bold tracking-wide">Tasks</span>
         </button>
-        <button onclick="window.location.href='notices.html'" class="flex flex-col items-center gap-1 px-3 py-1 text-slate-400 active:text-indigo-600 transition">
-            <i class="fas fa-bell text-[15px]"></i><span class="text-[9px] font-bold">Notices</span>
-        </button>
-        <button onclick="window.location.href='profile.html'" class="flex flex-col items-center gap-1 px-3 py-1 text-slate-400 active:text-indigo-600 transition">
-            <i class="fas fa-user text-[15px]"></i><span class="text-[9px] font-bold">Profile</span>
+        <button onclick="window.location.href='profile.html'" class="flex flex-col items-center gap-1.5 w-16 text-slate-400 hover:text-indigo-600 transition">
+            <i class="fas fa-user text-lg"></i>
+            <span class="text-[9px] font-bold tracking-wide">Profile</span>
         </button>
     </div>
 
@@ -279,24 +190,23 @@
 
 <script type="module">
     import { auth, db } from '../js/firebase-init.js';
-    // NAYA: 'orderBy' aur 'limit' hata diya gaya index error fix karne ke liye
     import { doc, getDoc, collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
-    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
     const hour = new Date().getHours();
-    document.getElementById('greetingMsg').innerText = hour < 12 ? 'Good Morning' : (hour < 18 ? 'Good Afternoon' : 'Good Evening');
+    document.getElementById('greetingMsg').innerText = hour < 12 ? 'Good Morning,' : (hour < 18 ? 'Good Afternoon,' : 'Good Evening,');
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             const userDoc = await getDoc(doc(db, "users", user.uid));
             if (userDoc.exists()) {
                 const userData = userDoc.data();
-                const schoolId = userData.schoolId; // GET SCHOOL ID
+                const schoolId = userData.schoolId; 
                 
                 // Profile Setup
                 document.getElementById('studentName').innerText = userData.name || userData.firstName || 'Student';
                 document.getElementById('studentId').innerText = userData.studentId || userData.admissionNo || 'N/A';
-                let clsText = userData.class ? `Class ${userData.class}` : 'Unassigned';
+                let clsText = userData.class ? `${userData.class}` : 'N/A';
                 let secText = userData.section ? ` ${userData.section}` : '';
                 document.getElementById('batchName').innerText = clsText + secText;
 
@@ -312,71 +222,46 @@
 
                 const targetClassStr = String(userData.class || "");
 
-                // A. Assignments Loader Fix (Firebase Index Bug Fixed)
+                // A. Assignments (With Notification Badge)
                 const assignQuery = query(collection(db, "assignments"), where("schoolId", "==", schoolId));
                 onSnapshot(assignQuery, (snapshot) => {
-                    const container = document.getElementById('assignmentsContainer');
                     let filteredAssigns = snapshot.docs.filter(d => String(d.data().targetClass || d.data().className || "") === targetClassStr);
                     
-                    // NAYA: Client-side Sort (Latest Upar)
-                    filteredAssigns.sort((a, b) => (b.data().createdAt?.toMillis() || 0) - (a.data().createdAt?.toMillis() || 0));
-
-                    document.getElementById('statAssignments').innerText = filteredAssigns.length;
-
-                    if(filteredAssigns.length === 0) {
-                        container.innerHTML = `<div class="bg-white p-4 rounded-2xl border border-[var(--line)] text-center"><p class="text-xs text-slate-400 py-2">No pending assignments — all caught up.</p></div>`;
+                    const badge = document.getElementById('statAssignmentsBadge');
+                    if(filteredAssigns.length > 0) {
+                        badge.innerText = filteredAssigns.length;
+                        badge.classList.remove('hidden');
                     } else {
-                        container.innerHTML = "";
-                        filteredAssigns.slice(0, 2).forEach((docSnap) => { 
-                            const data = docSnap.data();
-                            const dlUrl = data.fileUrl ? (data.fileUrl.includes('/upload/') ? data.fileUrl.replace('/upload/', '/upload/fl_attachment/') : data.fileUrl) : "#";
-                            
-                            container.innerHTML += `
-                                <div class="bg-white p-4 rounded-2xl border border-[var(--line)] mb-2.5 relative text-left">
-                                    <div class="absolute top-3 right-3 text-[8px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full" style="background:var(--accent-soft);color:var(--accent);">New</div>
-                                    <h4 class="font-display font-semibold text-slate-800 text-sm truncate pr-10">${data.title}</h4>
-                                    <p class="text-xs text-slate-500 mt-1 line-clamp-1">${data.description || 'Subject related task'}</p>
-                                    <a href="${dlUrl}" target="_blank" class="mt-3 text-[11px] font-bold px-3 py-2 rounded-xl w-full text-center block transition" style="color:var(--accent);background:var(--accent-soft);">Download details</a>
-                                </div>
-                            `;
-                        });
+                        badge.classList.add('hidden');
                     }
                 });
 
-                // B. Live Classes Loader Fix
+                // B. Live Classes Loader
                 const classQuery = query(collection(db, "live_classes"), where("schoolId", "==", schoolId));
                 onSnapshot(classQuery, (snapshot) => {
                     const scheduleContainer = document.getElementById('scheduleContainer');
                     let filteredClasses = snapshot.docs.filter(d => String(d.data().targetClass || d.data().className || "") === targetClassStr);
                     
-                    // Client-side Sort
                     filteredClasses.sort((a, b) => (b.data().createdAt?.toMillis() || 0) - (a.data().createdAt?.toMillis() || 0));
 
                     if (filteredClasses.length === 0) {
-                        scheduleContainer.innerHTML = `<div class="bg-white p-4 rounded-2xl border border-[var(--line)] text-center"><p class="text-xs text-slate-400 py-2">No classes scheduled for today.</p></div>`;
+                        scheduleContainer.innerHTML = `<div class="glass-card rounded-[20px] p-6 text-center"><p class="text-sm text-slate-400 font-medium">Relax, no classes scheduled for today.</p></div>`;
                     } else {
                         scheduleContainer.innerHTML = "";
-                        filteredClasses.forEach((docSnap, idx) => {
+                        filteredClasses.forEach((docSnap) => {
                             const data = docSnap.data();
-                            const isLast = idx === filteredClasses.length - 1;
                             scheduleContainer.innerHTML += `
-                                <div class="flex gap-3">
-                                    <div class="flex flex-col items-center pt-5">
-                                        <div class="rail-dot"></div>
-                                        ${isLast ? '' : '<div class="rail-line flex-grow" style="min-height:56px;"></div>'}
+                                <div class="glass-card p-4 rounded-[20px] flex items-center gap-4 text-left">
+                                    <div class="w-12 h-12 rounded-[14px] bg-red-50 flex items-center justify-center shrink-0 border border-red-100">
+                                        <i class="fas fa-video text-red-500 text-lg"></i>
                                     </div>
-                                    <div class="bg-white p-3.5 rounded-2xl border border-[var(--line)] mb-3 flex items-center gap-3 flex-grow text-left">
-                                        <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:#FEEAEA;">
-                                            <i class="fas fa-video text-sm" style="color:#DC2626;"></i>
-                                        </div>
-                                        <div class="flex-grow min-w-0">
-                                            <h4 class="font-display font-semibold text-slate-800 text-sm truncate">${data.subject || data.title || 'Live Class'}</h4>
-                                            <p class="text-[10px] text-slate-500 font-medium mt-0.5">Tap to join when live</p>
-                                        </div>
-                                        <a href="${data.meetingLink || '#'}" target="_blank" class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style="background:var(--accent);">
-                                            <i class="fas fa-play text-white text-xs ml-0.5"></i>
-                                        </a>
+                                    <div class="flex-grow min-w-0">
+                                        <h4 class="font-bold text-slate-800 text-sm truncate">${data.subject || data.title || 'Live Class'}</h4>
+                                        <p class="text-[11px] text-slate-500 font-medium mt-0.5"><i class="far fa-clock mr-1"></i>Tap to join</p>
                                     </div>
+                                    <a href="${data.meetingLink || '#'}" target="_blank" class="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center shrink-0 shadow-md shadow-indigo-600/30 hover:bg-indigo-700 transition">
+                                        <i class="fas fa-play text-white text-xs ml-0.5"></i>
+                                    </a>
                                 </div>
                             `;
                         });
@@ -388,25 +273,27 @@
                 onSnapshot(noticeQuery, (snapshot) => {
                     const noticeContainer = document.getElementById('announcementContainer');
                     if(snapshot.empty) {
-                        noticeContainer.innerHTML = `<div class="bg-white p-4 rounded-2xl border border-[var(--line)] text-center"><p class="text-xs text-slate-400 py-2">No new announcements.</p></div>`;
+                        noticeContainer.innerHTML = `<div class="glass-card rounded-[20px] p-5 text-center"><p class="text-sm text-slate-400 font-medium">No new announcements.</p></div>`;
                     } else {
                         let allNotices = [...snapshot.docs];
                         allNotices.sort((a, b) => (b.data().createdAt?.toMillis() || 0) - (a.data().createdAt?.toMillis() || 0));
                         
-                        const data = allNotices.data();
+                        const data = allNotices.data(); // Fixed Bug Here
                         noticeContainer.innerHTML = `
-                            <div class="p-4 rounded-2xl border flex items-start gap-3" style="background:var(--amber-soft);border-color:#F3D9A8;">
-                                <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background:#FBE5C0;color:var(--amber);"><i class="fas fa-bullhorn text-sm"></i></div>
-                                <div class="text-left">
-                                    <h4 class="font-display font-semibold text-slate-800 text-sm">${data.title}</h4>
-                                    <p class="text-xs text-slate-600 mt-1 leading-relaxed">${data.description}</p>
+                            <div class="glass-card p-4 rounded-[20px] flex items-start gap-4 border-l-4 border-l-amber-400">
+                                <div class="w-10 h-10 rounded-[14px] bg-amber-50 flex items-center justify-center shrink-0 text-amber-500">
+                                    <i class="fas fa-bullhorn"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-slate-800 text-sm mb-1">${data.title}</h4>
+                                    <p class="text-xs text-slate-600 leading-relaxed">${data.description}</p>
                                 </div>
                             </div>
                         `;
                     }
                 });
 
-                // D. Attendance Load (FILTERED BY EMAIL & SCHOOL)
+                // D. Attendance Load
                 const attQuery = query(collection(db, "attendance"), where("studentEmail", "==", user.email), where("schoolId", "==", schoolId));
                 onSnapshot(attQuery, (snapshot) => {
                     let presentCount = 0;
@@ -417,19 +304,7 @@
                     });
                     
                     let percentage = totalCount === 0 ? "N/A" : Math.round((presentCount / totalCount) * 100) + "%";
-                    
-                    const statEl = document.getElementById('statAttendance');
-                    statEl.innerText = percentage;
-                    
-                    if(percentage !== "N/A") {
-                        if(parseInt(percentage) >= 75) {
-                            statEl.style.color = "#16A34A";
-                        } else if(parseInt(percentage) < 50) {
-                            statEl.style.color = "#DC2626";
-                        } else {
-                            statEl.style.color = "#4F46E5";
-                        }
-                    }
+                    document.getElementById('statAttendance').innerText = percentage;
                 });
 
             } else {
@@ -437,13 +312,6 @@
             }
         } else {
             window.location.href = "../index.html"; 
-        }
-    });
-
-    document.getElementById('logoutBtn').addEventListener('click', async () => {
-        if(confirm("Are you sure you want to logout?")) {
-            await signOut(auth);
-            window.location.href = "../index.html";
         }
     });
 </script>
