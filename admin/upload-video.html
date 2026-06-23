@@ -39,17 +39,17 @@
                 <input type="text" id="title" required placeholder="e.g. Newton's Laws" class="w-full p-2.5 text-sm border rounded-xl outline-none focus:border-blue-500 bg-slate-50">
             </div>
 
-            <div class="border-2 border-dashed border-blue-200 rounded-xl p-4 text-center bg-blue-50 relative">
-                <input type="file" id="videoFile" accept="video/mp4,video/x-m4v,video/*" required class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+            <div class="border-2 border-dashed border-blue-200 rounded-xl p-4 text-center bg-blue-50 relative overflow-hidden">
+                <input type="file" id="videoFile" accept="video/mp4,video/x-m4v,video/*" required class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
                 <i class="fas fa-film text-blue-400 text-2xl mb-2"></i>
-                <p class="text-xs font-bold text-slate-600" id="fileNameText">Tap to select video (.mp4)</p>
+                <p class="text-xs font-bold text-slate-600 truncate px-2" id="fileNameText">Tap to select video (.mp4)</p>
             </div>
 
-            <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl mt-2 transition shadow-md shadow-blue-100 flex justify-center items-center gap-2">
+            <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl mt-2 transition shadow-md shadow-blue-100 flex justify-center items-center gap-2 relative overflow-hidden">
                 <i class="fas fa-upload"></i> Start Upload & Publish
             </button>
             
-            <p id="uploadStatus" class="text-xs text-center font-bold text-blue-600 hidden mt-2"></p>
+            <p id="uploadStatus" class="text-[11px] text-center font-bold text-blue-600 hidden mt-2"></p>
         </form>
     </div>
 </div>
@@ -59,7 +59,7 @@
     import { collection, addDoc, getDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
-    // 👉 YAHAN APNA WISTIA API PASSWORD DAALEIN 👈
+    // Aapka Wistia API Password (lowercase 'c' ke sath)
     const WISTIA_API_PASSWORD = "cdd0acb94d045a539e14e162c96c2d8bc29f6ab7cb29ae9689c2defcce7c9b04"; 
 
     let adminSchoolId = null;
@@ -69,6 +69,7 @@
     const fileNameText = document.getElementById('fileNameText');
     const uploadStatus = document.getElementById('uploadStatus');
 
+    // Jab file select ho tab naam dikhaye
     fileInput.addEventListener('change', (e) => {
         if(e.target.files.length > 0) {
             fileNameText.innerText = e.target.files.name;
@@ -79,6 +80,7 @@
         }
     });
 
+    // Check Admin Login & get School ID
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             const adminDoc = await getDoc(doc(db, "users", user.uid));
@@ -88,6 +90,7 @@
         }
     });
 
+    // Upload & Submit Logic
     form.addEventListener('submit', async () => {
         const file = fileInput.files;
         if(!file) return alert("Please select a video file!");
@@ -99,7 +102,9 @@
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading to Wistia...';
         uploadStatus.classList.remove('hidden');
-        uploadStatus.innerText = "Please wait, uploading video... (Do not close this page)";
+        uploadStatus.innerText = "Please wait, uploading video... (Do not close this app)";
+        uploadStatus.classList.replace('text-emerald-600', 'text-blue-600');
+        uploadStatus.classList.replace('text-red-600', 'text-blue-600');
 
         try {
             const formData = new FormData();
@@ -107,18 +112,24 @@
             formData.append('file', file);
             formData.append('name', title); 
 
+            // Wistia Server par bhejna
             const wistiaResponse = await fetch('https://upload.wistia.com/', {
                 method: 'POST',
                 body: formData
             });
 
-            if (!wistiaResponse.ok) throw new Error("Wistia Upload Failed!");
+            // Asli Error pakadne ka system
+            if (!wistiaResponse.ok) {
+                const errorMessage = await wistiaResponse.text();
+                throw new Error("Wistia Error: " + errorMessage);
+            }
 
             const wistiaData = await wistiaResponse.json();
             const generatedWistiaId = wistiaData.hashed_id;
 
-            uploadStatus.innerText = "Saving to Firebase...";
+            uploadStatus.innerText = "Saving to Firebase Database...";
 
+            // Firebase me entry save karna
             await addDoc(collection(db, "videos"), {
                 schoolId: adminSchoolId,
                 targetClass: targetClass,
@@ -128,17 +139,20 @@
                 createdAt: serverTimestamp()
             });
 
+            // Success Hone par Form Reset
             form.reset();
             fileNameText.innerText = "Tap to select video (.mp4)";
             fileNameText.classList.remove('text-blue-600');
-            uploadStatus.innerText = "Video published successfully!";
+            uploadStatus.innerText = "✅ Video published successfully!";
             uploadStatus.classList.replace('text-blue-600', 'text-emerald-600');
             
-            setTimeout(() => { uploadStatus.classList.add('hidden'); }, 3000);
+            setTimeout(() => { uploadStatus.classList.add('hidden'); }, 4000);
 
         } catch(error) {
-            alert("Error: " + error.message);
-            uploadStatus.classList.add('hidden');
+            // Agar fail hua to screen par error text dikhega
+            uploadStatus.innerText = "❌ Failed: " + error.message;
+            uploadStatus.classList.replace('text-blue-600', 'text-red-600');
+            alert(error.message);
         }
 
         submitBtn.innerHTML = '<i class="fas fa-upload"></i> Start Upload & Publish';
