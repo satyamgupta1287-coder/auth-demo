@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Timetable - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }</style>
+</head>
+<body class="pb-10">
+
+<!-- Header -->
+<div class="bg-indigo-800 text-white px-5 py-5 rounded-b-[24px] shadow-md flex items-center gap-4 sticky top-0 z-50">
+    <button onclick="window.location.href='teacher-dashboard.html'" class="text-white hover:text-indigo-200 transition text-lg active:scale-95">
+        <i class="fas fa-arrow-left"></i>
+    </button>
+    <h1 class="text-lg font-bold">Manage Timetable</h1>
+</div>
+
+<div class="max-w-md mx-auto px-5 mt-6">
+    <!-- Add Timetable Form -->
+    <div class="bg-white p-5 rounded-[20px] shadow-sm border border-slate-100 mb-8">
+        <h2 class="text-sm font-bold text-slate-800 mb-4"><i class="fas fa-plus-circle text-indigo-500 mr-2"></i>Add Period</h2>
+        <form id="timetableForm" class="space-y-3" onsubmit="return false;">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Class</label>
+                    <input type="text" id="targetClass" required placeholder="e.g. 10" class="w-full p-2.5 text-sm border rounded-xl outline-none focus:border-indigo-500 bg-slate-50">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Day</label>
+                    <select id="day" required class="w-full p-2.5 text-sm border rounded-xl outline-none focus:border-indigo-500 bg-slate-50">
+                        <option value="Monday">Monday</option>
+                        <option value="Tuesday">Tuesday</option>
+                        <option value="Wednesday">Wednesday</option>
+                        <option value="Thursday">Thursday</option>
+                        <option value="Friday">Friday</option>
+                        <option value="Saturday">Saturday</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Subject</label>
+                    <input type="text" id="subject" required placeholder="e.g. Math" class="w-full p-2.5 text-sm border rounded-xl outline-none focus:border-indigo-500 bg-slate-50">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Time</label>
+                    <input type="text" id="time" required placeholder="e.g. 09:00 AM" class="w-full p-2.5 text-sm border rounded-xl outline-none focus:border-indigo-500 bg-slate-50">
+                </div>
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Teacher Name</label>
+                <input type="text" id="teacher" required placeholder="e.g. Mr. Sharma" class="w-full p-2.5 text-sm border rounded-xl outline-none focus:border-indigo-500 bg-slate-50">
+            </div>
+            <button type="submit" id="submitBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl mt-2 transition">Add to Schedule</button>
+        </form>
+    </div>
+
+    <!-- Added Timetable List -->
+    <h3 class="font-bold text-slate-800 mb-3 text-sm px-1">Added Classes</h3>
+    <div id="listContainer" class="space-y-3">
+        <div class="text-center p-5"><p class="text-sm text-slate-400">Loading...</p></div>
+    </div>
+</div>
+
+<script type="module">
+    import { auth, db } from '../js/firebase-init.js';
+    import { collection, addDoc, query, where, onSnapshot, getDoc, doc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+
+    let adminSchoolId = null;
+    const form = document.getElementById('timetableForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const listContainer = document.getElementById('listContainer');
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            const adminDoc = await getDoc(doc(db, "users", user.uid));
+            if (adminDoc.exists()) {
+                adminSchoolId = adminDoc.data().schoolId;
+                loadTimetable();
+            }
+        } else {
+            window.location.href = "../index.html";
+        }
+    });
+
+    // Add Period
+    form.addEventListener('submit', async () => {
+        submitBtn.innerText = "Adding..."; submitBtn.disabled = true;
+        try {
+            await addDoc(collection(db, "timetable"), {
+                schoolId: adminSchoolId,
+                targetClass: document.getElementById('targetClass').value.trim(),
+                day: document.getElementById('day').value,
+                subject: document.getElementById('subject').value.trim(),
+                time: document.getElementById('time').value.trim(),
+                teacher: document.getElementById('teacher').value.trim(),
+                createdAt: serverTimestamp()
+            });
+            form.reset();
+            alert("Period added successfully!");
+        } catch(error) {
+            alert("Error: " + error.message);
+        }
+        submitBtn.innerText = "Add to Schedule"; submitBtn.disabled = false;
+    });
+
+    // Load Periods
+    function loadTimetable() {
+        const q = query(collection(db, "timetable"), where("schoolId", "==", adminSchoolId));
+        onSnapshot(q, (snapshot) => {
+            if(snapshot.empty) {
+                listContainer.innerHTML = `<div class="bg-white p-5 rounded-2xl border text-center"><p class="text-sm text-slate-400">No periods added yet.</p></div>`;
+                return;
+            }
+            
+            let items = [];
+            snapshot.forEach(d => items.push({id: d.id, ...d.data()}));
+            // Sort by Class then Day
+            items.sort((a, b) => a.targetClass.localeCompare(b.targetClass) || a.day.localeCompare(b.day));
+
+            listContainer.innerHTML = "";
+            items.forEach(item => {
+                listContainer.innerHTML += `
+                    <div class="bg-white p-4 rounded-2xl border flex justify-between items-center shadow-sm">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase">Class ${item.targetClass}</span>
+                                <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded uppercase">${item.day}</span>
+                            </div>
+                            <h4 class="font-bold text-slate-800 text-sm">${item.subject} <span class="text-slate-400 font-normal text-xs">(${item.time})</span></h4>
+                            <p class="text-xs text-slate-500 mt-0.5"><i class="fas fa-chalkboard-teacher mr-1"></i>${item.teacher}</p>
+                        </div>
+                        <button onclick="deletePeriod('${item.id}')" class="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 transition shrink-0">
+                            <i class="fas fa-trash text-xs"></i>
+                        </button>
+                    </div>
+                `;
+            });
+        });
+    }
+
+    // Delete Logic
+    window.deletePeriod = async (id) => {
+        if(confirm("Delete this period?")) {
+            await deleteDoc(doc(db, "timetable", id));
+        }
+    };
+</script>
+</body>
+</html>
