@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Feedback - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }</style>
+</head>
+<body class="pb-10">
+
+<!-- Header -->
+<div class="bg-sky-600 text-white px-5 py-5 rounded-b-[24px] shadow-md flex items-center gap-4 sticky top-0 z-50">
+    <button onclick="window.location.href='teacher-dashboard.html'" class="text-white hover:text-sky-200 transition text-lg active:scale-95">
+        <i class="fas fa-arrow-left"></i>
+    </button>
+    <h1 class="text-lg font-bold">Student Feedback</h1>
+</div>
+
+<div class="max-w-md mx-auto px-5 mt-6">
+    <div id="feedbackContainer" class="space-y-4">
+        <div class="text-center p-5"><p class="text-sm text-slate-400">Loading...</p></div>
+    </div>
+</div>
+
+<script type="module">
+    import { auth, db } from '../js/firebase-init.js';
+    import { collection, query, where, onSnapshot, getDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+
+    let adminSchoolId = null;
+    const feedbackContainer = document.getElementById('feedbackContainer');
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            const adminDoc = await getDoc(doc(db, "users", user.uid));
+            if (adminDoc.exists()) {
+                adminSchoolId = adminDoc.data().schoolId;
+                loadFeedback();
+            }
+        } else {
+            window.location.href = "../index.html";
+        }
+    });
+
+    function loadFeedback() {
+        const q = query(collection(db, "feedback"), where("schoolId", "==", adminSchoolId));
+        onSnapshot(q, (snapshot) => {
+            if(snapshot.empty) {
+                feedbackContainer.innerHTML = `<div class="bg-white p-6 rounded-2xl border text-center"><p class="text-sm text-slate-400 font-medium">No feedback received yet.</p></div>`;
+                return;
+            }
+            
+            let items = [];
+            snapshot.forEach(d => items.push({id: d.id, ...d.data()}));
+            items.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0)); // Latest first
+
+            feedbackContainer.innerHTML = "";
+            items.forEach(item => {
+                const dateStr = item.createdAt ? new Date(item.createdAt.toDate()).toLocaleDateString('en-GB', {day:'numeric', month:'short'}) : 'Recently';
+                
+                let icon = "fa-comment-dots";
+                if(item.category === 'Suggestion') icon = "fa-lightbulb text-amber-500";
+                if(item.category === 'Academics') icon = "fa-book text-blue-500";
+                if(item.category === 'Facilities') icon = "fa-building text-emerald-500";
+                
+                feedbackContainer.innerHTML += `
+                    <div class="bg-white p-5 rounded-[20px] shadow-sm border border-slate-100">
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 bg-slate-50 rounded-full flex items-center justify-center border">
+                                    <i class="fas ${icon} text-sm"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-slate-800 text-xs">${item.category}</h4>
+                                    <p class="text-[10px] text-slate-400 font-medium">From: ${item.studentName}</p>
+                                </div>
+                            </div>
+                            <span class="text-[10px] text-slate-400 font-bold">${dateStr}</span>
+                        </div>
+                        <p class="text-sm text-slate-700 leading-relaxed">${item.message}</p>
+                    </div>
+                `;
+            });
+        });
+    }
+</script>
+</body>
+</html>
