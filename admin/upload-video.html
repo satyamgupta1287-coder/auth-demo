@@ -47,7 +47,6 @@
     </div>
 
     <div id="view-upload" class="hidden">
-        
         <div class="bg-white p-5 rounded-[20px] shadow-sm border border-slate-100 mb-8">
             <h2 class="text-sm font-bold text-slate-800 mb-4"><i class="fas fa-cloud-upload-alt text-blue-500 mr-2"></i>Upload to <span id="lblActiveSubject" class="text-blue-600"></span></h2>
             
@@ -114,9 +113,9 @@
 
 </div>
 
-<div id="courseModal" class="fixed inset-0 z- bg-black/60 backdrop-blur-sm hidden flex items-center justify-center px-4 overflow-y-auto py-10">
+<div id="courseModal" class="fixed inset-0 z- bg-black/60 backdrop-blur-sm hidden items-center justify-center px-4 overflow-y-auto py-10">
     <div class="bg-white w-full max-w-sm rounded-[24px] p-6 shadow-2xl my-auto">
-        <h3 class="font-bold text-slate-800 text-lg mb-4">Create Premium Batch</h3>
+        <h3 class="font-bold text-slate-800 text-lg mb-4" id="modalTitleText">Create Premium Batch</h3>
         
         <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Batch Name *</label>
         <input type="text" id="newCourseName" placeholder="e.g. Arjuna JEE 2026" class="w-full p-2.5 border rounded-xl outline-none focus:border-blue-500 bg-slate-50 mb-3 text-sm">
@@ -149,7 +148,7 @@
     </div>
 </div>
 
-<div id="subjectModal" class="fixed inset-0 z- bg-black/60 backdrop-blur-sm hidden flex items-center justify-center px-6">
+<div id="subjectModal" class="fixed inset-0 z- bg-black/60 backdrop-blur-sm hidden items-center justify-center px-6">
     <div class="bg-white w-full max-w-sm rounded-[24px] p-6 shadow-2xl">
         <h3 class="font-bold text-slate-800 text-lg mb-4">Add Subject to <span id="subjModalCourseName" class="text-blue-600"></span></h3>
         <input type="text" id="newSubjectName" placeholder="e.g. Physics, Math" class="w-full p-3 border rounded-xl outline-none focus:border-purple-500 bg-slate-50 mb-5 text-sm">
@@ -161,7 +160,7 @@
     </div>
 </div>
 
-<div id="deleteModal" class="fixed inset-0 z- bg-black/60 backdrop-blur-sm hidden flex items-center justify-center px-6">
+<div id="deleteModal" class="fixed inset-0 z- bg-black/60 backdrop-blur-sm hidden items-center justify-center px-6">
     <div class="bg-white w-full max-w-sm rounded-[20px] p-5 shadow-2xl">
         <h3 class="font-bold text-slate-800 text-sm mb-1 text-center">Delete this video?</h3>
         <div class="flex gap-2 mt-4">
@@ -190,6 +189,10 @@
     let notesUrl = "";
     let testUrl = "";
     let pendingDeleteId = null;
+    
+    // Edit state variables
+    let isEditingCourse = false;
+    let editingMetaId = null;
 
     const backBtn = document.getElementById('backBtn');
     const headerTitle = document.getElementById('headerTitle');
@@ -269,9 +272,12 @@
     });
 
     function fetchDatabase() {
+        // 🌟 FETCH ALL DATA OF COURSE META
         onSnapshot(query(collection(db, "courseMeta"), where("schoolId", "==", adminSchoolId)), (snap) => {
             allCourseMeta = {};
-            snap.forEach(d => { allCourseMeta[d.data().course] = d.data().photoUrl; });
+            snap.forEach(d => { 
+                allCourseMeta[d.data().course] = { docId: d.id, ...d.data() }; 
+            });
             updateUI();
         });
 
@@ -347,15 +353,23 @@
 
         cList.innerHTML = "";
         courses.forEach(course => {
-            const photo = allCourseMeta[course] || 'https://via.placeholder.com/150/e2e8f0/94a3b8?text=Course';
+            const meta = allCourseMeta[course] || {};
+            const photo = meta.photoUrl || 'https://via.placeholder.com/150/e2e8f0/94a3b8?text=Course';
+            const safeCourse = course.replace(/'/g, "\\'");
+            
+            // 🌟 NAYA DESIGN WITH EDIT BUTTON
             cList.innerHTML += `
-                <div onclick="selectCourse('${course}')" class="bg-white p-3 rounded-[20px] shadow-sm border border-slate-100 flex items-center gap-4 cursor-pointer active:scale-95 transition">
-                    <img src="${photo}" class="w-14 h-14 rounded-xl object-cover border border-slate-100">
-                    <div class="flex-1">
-                        <h4 class="font-bold text-slate-800 text-sm">${course}</h4>
-                        <p class="text-[11px] text-slate-400">Tap to view subjects</p>
+                <div class="bg-white p-3 rounded-[20px] shadow-sm border border-slate-100 flex items-center justify-between gap-3 relative">
+                    <div class="flex-1 flex items-center gap-3 cursor-pointer active:scale-95 transition" onclick="selectCourse('${safeCourse}')">
+                        <img src="${photo}" class="w-14 h-14 rounded-xl object-cover border border-slate-100 shrink-0">
+                        <div class="flex-1 min-w-0">
+                            <h4 class="font-bold text-slate-800 text-sm truncate">${course}</h4>
+                            <p class="text-[11px] text-slate-400">Tap to view subjects</p>
+                        </div>
                     </div>
-                    <i class="fas fa-chevron-right text-slate-300"></i>
+                    <button onclick="openEditCourseModal('${safeCourse}')" class="w-10 h-10 shrink-0 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-full flex items-center justify-center active:scale-90 transition border border-blue-100 shadow-sm z-10">
+                        <i class="fas fa-edit"></i>
+                    </button>
                 </div>
             `;
         });
@@ -420,27 +434,73 @@
         });
     }
 
-    window.openCourseModal = () => { document.getElementById('courseModal').classList.remove('hidden'); document.getElementById('courseModal').classList.add('flex'); };
+    // ================= MODAL LOGIC (Fix: No more invisible screens!) =================
     
-    // 🌟 RESET FORM WHEN CLOSED
+    window.openCourseModal = () => { 
+        isEditingCourse = false;
+        editingMetaId = null;
+        
+        document.getElementById('modalTitleText').innerText = "Create Premium Batch";
+        document.getElementById('newCourseName').value = '';
+        document.getElementById('newCourseName').disabled = false; // Name edit chalu
+        document.getElementById('coursePrice').value = '';
+        document.getElementById('courseOriginalPrice').value = '';
+        document.getElementById('courseLanguage').value = '';
+        document.getElementById('courseFeatures').value = '';
+        
+        newCoursePhotoUrl = "";
+        document.getElementById('coursePhotoLabel').innerHTML = "Upload Cover Photo";
+        
+        const m = document.getElementById('courseModal');
+        m.classList.remove('hidden'); 
+        m.classList.add('flex'); 
+    };
+
+    window.openEditCourseModal = (courseName) => {
+        isEditingCourse = true;
+        const meta = allCourseMeta[courseName] || {};
+        editingMetaId = meta.docId || `${adminSchoolId}_${courseName}`.replace(/\s+/g, '_').toLowerCase();
+        
+        document.getElementById('modalTitleText').innerText = "Edit Premium Batch";
+        
+        // Disable course name to prevent orphan videos
+        document.getElementById('newCourseName').value = courseName;
+        document.getElementById('newCourseName').disabled = true; 
+        
+        document.getElementById('coursePrice').value = meta.price || '';
+        document.getElementById('courseOriginalPrice').value = meta.originalPrice || '';
+        document.getElementById('courseLanguage').value = meta.language || '';
+        document.getElementById('courseFeatures').value = meta.features || '';
+        
+        newCoursePhotoUrl = meta.photoUrl || "";
+        if(newCoursePhotoUrl) {
+            document.getElementById('coursePhotoLabel').innerHTML = `<span class="text-emerald-600">Photo Kept ✓</span>`;
+        } else {
+            document.getElementById('coursePhotoLabel').innerHTML = "Upload Cover Photo";
+        }
+
+        const m = document.getElementById('courseModal');
+        m.classList.remove('hidden'); 
+        m.classList.add('flex'); 
+    };
+
     window.closeCourseModal = () => { 
-        document.getElementById('courseModal').classList.add('hidden'); 
-        document.getElementById('courseModal').classList.remove('flex'); 
+        const m = document.getElementById('courseModal');
+        m.classList.add('hidden'); 
+        m.classList.remove('flex'); 
     };
     
-    // 🌟 SAVE NEW DETAILS IN FIREBASE
     window.saveNewCourse = async () => {
         const cName = document.getElementById('newCourseName').value.trim();
         const cPrice = document.getElementById('coursePrice').value.trim() || "499";
         const cOrigPrice = document.getElementById('courseOriginalPrice').value.trim() || "1999";
         const cLang = document.getElementById('courseLanguage').value.trim() || "Hinglish";
-        const cFeatures = document.getElementById('courseFeatures').value.trim() || "Full Syllabus Coverage, PDF Notes, Test Series";
+        const cFeatures = document.getElementById('courseFeatures').value.trim() || "Live Classes, PDF Notes, Test Series";
 
         if(!cName || cName.toLowerCase() === 'undefined') return alert("Enter valid course name!");
         
-        const metaId = `${adminSchoolId}_${cName}`.replace(/\s+/g, '_').toLowerCase();
+        const metaId = editingMetaId ? editingMetaId : `${adminSchoolId}_${cName}`.replace(/\s+/g, '_').toLowerCase();
         
-        // Save to Database
         await setDoc(doc(db, "courseMeta", metaId), { 
             schoolId: adminSchoolId, 
             course: cName, 
@@ -451,24 +511,23 @@
             features: cFeatures
         }, { merge: true });
         
-        // Clear inputs
-        document.getElementById('newCourseName').value = '';
-        document.getElementById('coursePrice').value = '';
-        document.getElementById('courseOriginalPrice').value = '';
-        document.getElementById('courseLanguage').value = '';
-        document.getElementById('courseFeatures').value = '';
-        newCoursePhotoUrl = "";
-        document.getElementById('coursePhotoLabel').innerHTML = "Upload Cover Photo";
-
         closeCourseModal();
-        selectCourse(cName);
+        if(!isEditingCourse) {
+            selectCourse(cName);
+        } else {
+            renderCourses();
+        }
     };
 
     window.openSubjectModal = () => { 
         document.getElementById('subjModalCourseName').innerText = activeCourse;
-        document.getElementById('subjectModal').classList.remove('hidden'); document.getElementById('subjectModal').classList.add('flex'); 
+        const m = document.getElementById('subjectModal');
+        m.classList.remove('hidden'); m.classList.add('flex'); 
     };
-    window.closeSubjectModal = () => { document.getElementById('subjectModal').classList.add('hidden'); document.getElementById('subjectModal').classList.remove('flex'); };
+    window.closeSubjectModal = () => { 
+        const m = document.getElementById('subjectModal');
+        m.classList.add('hidden'); m.classList.remove('flex'); 
+    };
     window.saveNewSubject = () => {
         const sName = document.getElementById('newSubjectName').value.trim();
         if(!sName || sName.toLowerCase() === 'undefined') return alert("Enter valid subject name!");
@@ -476,11 +535,20 @@
         selectSubject(sName);
     };
 
-    window.openDeleteModal = (id, title) => { pendingDeleteId = id; document.getElementById('deleteModal').classList.remove('hidden'); document.getElementById('deleteModal').classList.add('flex'); };
-    window.closeDeleteModal = () => { pendingDeleteId = null; document.getElementById('deleteModal').classList.add('hidden'); document.getElementById('deleteModal').classList.remove('flex'); };
-    window.confirmDelete = async () => { if(pendingDeleteId) { await deleteDoc(doc(db, "videos", pendingDeleteId)); closeDeleteModal(); } };
+    window.openDeleteModal = (id, title) => { 
+        pendingDeleteId = id; 
+        const m = document.getElementById('deleteModal');
+        m.classList.remove('hidden'); m.classList.add('flex'); 
+    };
+    window.closeDeleteModal = () => { 
+        pendingDeleteId = null; 
+        const m = document.getElementById('deleteModal');
+        m.classList.add('hidden'); m.classList.remove('flex'); 
+    };
+    window.confirmDelete = async () => { 
+        if(pendingDeleteId) { await deleteDoc(doc(db, "videos", pendingDeleteId)); closeDeleteModal(); } 
+    };
 
-    // 🌟 VIDEO UPLOAD LOGIC UNTOUCHED
     function uploadWithProgress(formData, totalBytes) {
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
@@ -502,3 +570,88 @@
             xhr.send(formData);
         });
     }
+
+    document.getElementById('videoForm').addEventListener('submit', async () => {
+        const file = fileInput.files;
+        if (!file) return alert("Select video file!");
+
+        let title = document.getElementById('title').value.trim() || "Untitled";
+        let teacherName = document.getElementById('teacherName').value.trim();
+        let targetClass = document.getElementById('targetClass').value.trim();
+
+        if(title.toLowerCase() === 'undefined') title = 'Untitled';
+        if(teacherName.toLowerCase() === 'undefined') teacherName = '';
+        if(targetClass.toLowerCase() === 'undefined') targetClass = '';
+
+        localStorage.setItem('ast_teacher', teacherName);
+        localStorage.setItem('ast_class', targetClass);
+
+        const sBtn = document.getElementById('submitBtn');
+        const uStatus = document.getElementById('uploadStatus');
+        const pWrap = document.getElementById('progressWrap');
+
+        sBtn.disabled = true;
+        sBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+        uStatus.classList.remove('hidden', 'text-emerald-600', 'text-red-600');
+        uStatus.classList.add('text-blue-600');
+        uStatus.innerText = "Please wait, uploading video... (Do not close app)";
+        pWrap.classList.remove('hidden');
+
+        try {
+            const formData = new FormData();
+            
+            let finalFileName = file.name || "lecture_video.mp4";
+            if (!finalFileName.includes('.')) {
+                finalFileName += ".mp4";
+            }
+            formData.append('file', file, finalFileName);
+            
+            formData.append('name', title);
+
+            const wistiaData = await uploadWithProgress(formData, file.size);
+            if (!wistiaData || !wistiaData.hashed_id) throw new Error("Video ID not received from Wistia.");
+            
+            await addDoc(collection(db, "videos"), {
+                schoolId: adminSchoolId || "UNKNOWN",
+                course: activeCourse,      
+                subject: activeSubject,    
+                teacherName: teacherName,
+                targetClass: targetClass,
+                title: title,
+                wistiaId: wistiaData.hashed_id,
+                notesUrl: notesUrl || "", 
+                testUrl: testUrl || "",   
+                createdAt: serverTimestamp()
+            });
+
+            document.getElementById('title').value = '';
+            fileInput.value = '';
+            document.getElementById('fileNameText').innerText = "Tap to select video (.mp4)";
+            document.getElementById('fileSizeText').innerText = "";
+            
+            notesUrl = ""; testUrl = "";
+            document.getElementById('notesLabel').innerText = "Attach Notes";
+            document.getElementById('testLabel').innerText = "Attach DPP / Test";
+            document.getElementById('notesBtn').classList.replace('bg-emerald-100', 'bg-emerald-50');
+            document.getElementById('testBtn').classList.replace('bg-purple-100', 'bg-purple-50');
+
+            uStatus.innerText = "✅ Published successfully!";
+            uStatus.classList.replace('text-blue-600', 'text-emerald-600');
+            setTimeout(() => { uStatus.classList.add('hidden'); pWrap.classList.add('hidden'); }, 3000);
+
+        } catch (error) {
+            try {
+                let errObj = JSON.parse(error.message.replace("Wistia Error: ", ""));
+                uStatus.innerText = "❌ Error: " + (errObj.detail || "Upload failed");
+            } catch(e) {
+                uStatus.innerText = "❌ Error: " + error.message;
+            }
+            uStatus.classList.replace('text-blue-600', 'text-red-600');
+        }
+
+        sBtn.innerHTML = '<i class="fas fa-upload"></i> Start Upload & Publish';
+        sBtn.disabled = false;
+    });
+</script>
+</body>
+</html>
