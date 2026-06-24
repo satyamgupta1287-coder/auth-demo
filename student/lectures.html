@@ -41,11 +41,12 @@
 
     const videoContainer = document.getElementById('videoContainer');
 
-    function showEmpty() {
+    function showEmpty(studentClass) {
         videoContainer.innerHTML = `
             <div class="bg-white p-8 rounded-[20px] border text-center shadow-sm">
                 <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 text-2xl mx-auto mb-3"><i class="fas fa-video-slash"></i></div>
-                <p class="text-sm text-slate-500 font-bold">No lectures uploaded yet.</p>
+                <p class="text-sm text-slate-500 font-bold">No lectures uploaded for Class ${studentClass} yet.</p>
+                <p class="text-xs text-slate-400 mt-2">Agar class ${studentClass} ka video upload kiya hai aur nahi dikh raha, toh admin se school ID check karwao.</p>
             </div>`;
     }
 
@@ -67,20 +68,21 @@
         try {
             const userDoc = await getDoc(doc(db, "users", user.uid));
             if (!userDoc.exists()) {
-                showError("User profile not found.");
+                showError("User profile not found in database.");
                 return;
             }
 
-            const { schoolId, class: studentClass } = userDoc.data();
+            const userData = userDoc.data();
+            // .trim() lagaya hai taaki galti se aaya extra space hat jaye
+            const schoolId = String(userData.schoolId || "").trim();
+            const studentClass = String(userData.class || "").trim();
 
-            if (!schoolId || studentClass === undefined || studentClass === null) {
-                showError("Missing schoolId or class on your profile.");
+            if (!schoolId || !studentClass) {
+                showError("Aapki profile mein School ID ya Class missing hai.");
                 return;
             }
 
-            // ✅ FIX: Sirf schoolId se query (single-field, composite index ki zaroorat nahi)
-            // targetClass ka filter ab client-side hota hai, isliye missing-index error se
-            // onSnapshot silently fail nahi hoga aur "Loading..." pe hamesha ke liye atkega nahi.
+            // Sirf schoolId se query kar rahe hain
             const q = query(collection(db, "videos"), where("schoolId", "==", schoolId));
 
             onSnapshot(
@@ -89,13 +91,17 @@
                     let videos = [];
                     snapshot.forEach((d) => {
                         const data = d.data();
-                        if (String(data.targetClass) === String(studentClass)) {
+                        // Video ki class ko bhi trim kar rahe hain
+                        const videoTargetClass = String(data.targetClass || "").trim();
+                        
+                        // Sirf wahi video dikhao jo is bacche ki class ka hai
+                        if (videoTargetClass === studentClass) {
                             videos.push({ id: d.id, ...data });
                         }
                     });
 
                     if (videos.length === 0) {
-                        showEmpty();
+                        showEmpty(studentClass);
                         return;
                     }
 
@@ -130,7 +136,6 @@
                     });
                 },
                 (error) => {
-                    // ✅ FIX: ab onSnapshot ka error bhi UI par dikhega, silent fail nahi hoga
                     showError("Error loading videos: " + error.message);
                 }
             );
