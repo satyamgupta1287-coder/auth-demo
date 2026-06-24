@@ -41,33 +41,69 @@
 
     const videoContainer = document.getElementById('videoContainer');
 
+    function showEmpty() {
+        videoContainer.innerHTML = `
+            <div class="bg-white p-8 rounded-[20px] border text-center shadow-sm">
+                <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 text-2xl mx-auto mb-3"><i class="fas fa-video-slash"></i></div>
+                <p class="text-sm text-slate-500 font-bold">No lectures uploaded yet.</p>
+            </div>`;
+    }
+
+    function showError(message) {
+        videoContainer.innerHTML = `
+            <div class="bg-red-50 p-6 rounded-[20px] border border-red-100 text-center">
+                <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-400 text-xl mx-auto mb-3"><i class="fas fa-exclamation-triangle"></i></div>
+                <p class="text-xs text-red-500 font-bold break-words">${message}</p>
+            </div>`;
+    }
+
     onAuthStateChanged(auth, async (user) => {
-        if (user) {
+        if (!user) {
+            // Agar bina login ke aaya to wapas login page par bhej do
+            window.location.href = "index.html";
+            return;
+        }
+
+        try {
             const userDoc = await getDoc(doc(db, "users", user.uid));
-            if (userDoc.exists()) {
-                const { schoolId, class: studentClass } = userDoc.data();
-                
-                // Firestore se sirf is bacche ki class ke videos mangwa rahe hain
-                const q = query(collection(db, "videos"), where("schoolId", "==", schoolId), where("targetClass", "==", String(studentClass)));
-                
-                onSnapshot(q, (snapshot) => {
-                    if(snapshot.empty) {
-                        videoContainer.innerHTML = `
-                            <div class="bg-white p-8 rounded-[20px] border text-center shadow-sm">
-                                <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 text-2xl mx-auto mb-3"><i class="fas fa-video-slash"></i></div>
-                                <p class="text-sm text-slate-500 font-bold">No lectures uploaded yet.</p>
-                            </div>`;
+            if (!userDoc.exists()) {
+                showError("User profile not found.");
+                return;
+            }
+
+            const { schoolId, class: studentClass } = userDoc.data();
+
+            if (!schoolId || studentClass === undefined || studentClass === null) {
+                showError("Missing schoolId or class on your profile.");
+                return;
+            }
+
+            // ✅ FIX: Sirf schoolId se query (single-field, composite index ki zaroorat nahi)
+            // targetClass ka filter ab client-side hota hai, isliye missing-index error se
+            // onSnapshot silently fail nahi hoga aur "Loading..." pe hamesha ke liye atkega nahi.
+            const q = query(collection(db, "videos"), where("schoolId", "==", schoolId));
+
+            onSnapshot(
+                q,
+                (snapshot) => {
+                    let videos = [];
+                    snapshot.forEach((d) => {
+                        const data = d.data();
+                        if (String(data.targetClass) === String(studentClass)) {
+                            videos.push({ id: d.id, ...data });
+                        }
+                    });
+
+                    if (videos.length === 0) {
+                        showEmpty();
                         return;
                     }
 
-                    let videos = [];
-                    snapshot.forEach(d => videos.push({id: d.id, ...d.data()}));
-                    
                     // Naya video sabse upar dikhega
                     videos.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
 
                     videoContainer.innerHTML = "";
-                    videos.forEach(video => {
+                    videos.forEach((video) => {
                         videoContainer.innerHTML += `
                             <div class="bg-white rounded-[20px] shadow-sm border border-slate-100 overflow-hidden">
                                 <div class="w-full bg-black relative" style="padding-top: 56.25%;">
@@ -92,11 +128,14 @@
                             </div>
                         `;
                     });
-                });
-            }
-        } else {
-            // Agar bina login ke aaya to wapas login page par bhej do
-            window.location.href = "index.html";
+                },
+                (error) => {
+                    // ✅ FIX: ab onSnapshot ka error bhi UI par dikhega, silent fail nahi hoga
+                    showError("Error loading videos: " + error.message);
+                }
+            );
+        } catch (err) {
+            showError("Error: " + err.message);
         }
     });
 </script>
