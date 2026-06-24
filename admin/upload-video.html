@@ -157,7 +157,7 @@
     import { collection, addDoc, getDoc, doc, deleteDoc, query, where, onSnapshot, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
-    // 🌟 YAHAN AAPKA ASLI WISTIA TOKEN LAGA DIYA HAI
+    // 🌟 AAPKA ASLI WISTIA TOKEN
     const WISTIA_ACCESS_TOKEN = "52e25c62ca626beb4dc90b4c6207ebc45861e5de7e6569d99c6ee0fe06b6b286";
 
     let adminSchoolId = null;
@@ -481,7 +481,14 @@
 
         try {
             const formData = new FormData();
-            formData.append('file', file);
+            
+            // 🌟 FILE EXTENSION FIX: Mobile browsers .mp4 hide kar dete hain, use force karo!
+            let finalFileName = file.name || "lecture_video.mp4";
+            if (!finalFileName.includes('.')) {
+                finalFileName += ".mp4";
+            }
+            formData.append('file', file, finalFileName);
+            
             formData.append('name', title);
 
             const wistiaData = await uploadWithProgress(formData, file.size);
@@ -516,7 +523,13 @@
             setTimeout(() => { uStatus.classList.add('hidden'); pWrap.classList.add('hidden'); }, 3000);
 
         } catch (error) {
-            uStatus.innerText = "❌ Error: " + error.message;
+            // Wistia Json error parse karne ke liye taaki saf-saf message aaye
+            try {
+                let errObj = JSON.parse(error.message.replace("Wistia Error: ", ""));
+                uStatus.innerText = "❌ Error: " + (errObj.detail || "Upload failed");
+            } catch(e) {
+                uStatus.innerText = "❌ Error: " + error.message;
+            }
             uStatus.classList.replace('text-blue-600', 'text-red-600');
         }
 
