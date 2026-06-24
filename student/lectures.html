@@ -34,8 +34,8 @@
 </div>
 
 <script type="module">
-    // Dhyan de: Agar JS folder alag hai to path './js/firebase-init.js' rakhein
-    import { auth, db } from './js/firebase-init.js'; 
+    // Yahan humne path fix kar diya hai (../js/firebase-init.js)
+    import { auth, db } from '../js/firebase-init.js'; 
     import { collection, query, where, onSnapshot, getDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
@@ -60,7 +60,6 @@
 
     onAuthStateChanged(auth, async (user) => {
         if (!user) {
-            // Agar bina login ke aaya to wapas login page par bhej do
             window.location.href = "index.html";
             return;
         }
@@ -73,7 +72,6 @@
             }
 
             const userData = userDoc.data();
-            // .trim() lagaya hai taaki galti se aaya extra space hat jaye
             const schoolId = String(userData.schoolId || "").trim();
             const studentClass = String(userData.class || "").trim();
 
@@ -82,7 +80,6 @@
                 return;
             }
 
-            // Sirf schoolId se query kar rahe hain
             const q = query(collection(db, "videos"), where("schoolId", "==", schoolId));
 
             onSnapshot(
@@ -91,10 +88,8 @@
                     let videos = [];
                     snapshot.forEach((d) => {
                         const data = d.data();
-                        // Video ki class ko bhi trim kar rahe hain
                         const videoTargetClass = String(data.targetClass || "").trim();
                         
-                        // Sirf wahi video dikhao jo is bacche ki class ka hai
                         if (videoTargetClass === studentClass) {
                             videos.push({ id: d.id, ...data });
                         }
@@ -105,7 +100,6 @@
                         return;
                     }
 
-                    // Naya video sabse upar dikhega
                     videos.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
 
                     videoContainer.innerHTML = "";
