@@ -157,6 +157,7 @@
     import { collection, addDoc, getDoc, doc, deleteDoc, query, where, onSnapshot, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
+    // 🌟 YAHAN AAPKA ASLI WISTIA TOKEN LAGA DIYA HAI
     const WISTIA_ACCESS_TOKEN = "52e25c62ca626beb4dc90b4c6207ebc45861e5de7e6569d99c6ee0fe06b6b286";
 
     let adminSchoolId = null;
@@ -176,7 +177,6 @@
     const headerTitle = document.getElementById('headerTitle');
     const headerPath = document.getElementById('headerPath');
 
-    // 🌟 MANUAL CACHE CLEAR FUNCTION
     window.clearAppGarbage = function() {
         localStorage.removeItem('ast_teacher');
         localStorage.removeItem('ast_class');
@@ -186,7 +186,6 @@
         window.location.reload();
     };
 
-    // AutoFill Logic (Strict 'undefined' blocker)
     function getSafeStorage(key) {
         let val = localStorage.getItem(key);
         if (!val || val.toLowerCase() === 'undefined' || val.toLowerCase() === 'null') return '';
@@ -201,7 +200,6 @@
         return mb >= 1 ? mb.toFixed(1) + " MB" : (bytes / 1024).toFixed(0) + " KB";
     }
 
-    // CLOUDINARY WIDGETS
     const coursePhotoWidget = cloudinary.createUploadWidget({ cloudName: 'dl1cddemu', uploadPreset: 'upload', resourceType: 'image' }, (e, r) => {
         if (!e && r && r.event === "success") {
             newCoursePhotoUrl = r.info.secure_url || "";
@@ -263,10 +261,9 @@
             allVideos = [];
             snap.forEach(d => {
                 const data = d.data();
-                // FIREBASE CLEANER: Purana 'undefined' filter
                 const c = data.course || '';
                 const s = data.subject || '';
-                if(c.toLowerCase() === 'undefined' || s.toLowerCase() === 'undefined') return; // Skip bad data
+                if(c.toLowerCase() === 'undefined' || s.toLowerCase() === 'undefined') return; 
                 
                 allVideos.push({
                     id: d.id,
@@ -447,7 +444,10 @@
                     document.getElementById('progressBytes').innerText = `${formatBytes(e.loaded)} / ${formatBytes(e.total)}`;
                 }
             };
-            xhr.onload = () => { if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText)); else reject(new Error("Wistia Error: Check API limits")); };
+            xhr.onload = () => { 
+                if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText)); 
+                else reject(new Error("Wistia Error: " + xhr.responseText)); 
+            };
             xhr.onerror = () => reject(new Error("Network connection error"));
             xhr.send(formData);
         });
