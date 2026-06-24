@@ -21,7 +21,7 @@
 
 <div class="max-w-md mx-auto px-5 mt-6">
     <div class="bg-white p-5 rounded-[20px] shadow-sm border border-slate-100 mb-8">
-        <h2 class="text-sm font-bold text-slate-800 mb-4"><i class="fas fa-cloud-upload-alt text-blue-500 mr-2"></i>Upload Video to Wistia</h2>
+        <h2 class="text-sm font-bold text-slate-800 mb-4"><i class="fas fa-cloud-upload-alt text-blue-500 mr-2"></i>Upload Video & Materials</h2>
         <form id="videoForm" class="space-y-3" onsubmit="return false;">
 
             <div>
@@ -30,7 +30,7 @@
             </div>
 
             <div>
-                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Course Photo</label>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Course Photo (One time)</label>
                 <button type="button" id="coursePhotoBtn" class="w-full p-2.5 text-sm border-2 border-dashed border-blue-200 rounded-xl bg-blue-50 text-blue-600 font-bold flex items-center justify-center gap-2">
                     <i class="fas fa-image"></i> <span id="coursePhotoLabel">Upload Course Cover Photo</span>
                 </button>
@@ -67,8 +67,18 @@
                 <p class="text-[10px] text-slate-400 mt-1" id="fileSizeText"></p>
             </div>
 
-            <!-- Progress Bar -->
-            <div id="progressWrap" class="hidden">
+            <div class="grid grid-cols-2 gap-3 pt-1">
+                <button type="button" id="notesBtn" class="p-3 border border-emerald-200 rounded-xl bg-emerald-50 text-emerald-600 flex flex-col items-center justify-center gap-1 active:scale-95 transition">
+                    <i class="fas fa-file-pdf text-xl mb-1"></i>
+                    <span id="notesLabel" class="text-[10px] font-bold uppercase tracking-wide">Attach Notes</span>
+                </button>
+                <button type="button" id="testBtn" class="p-3 border border-purple-200 rounded-xl bg-purple-50 text-purple-600 flex flex-col items-center justify-center gap-1 active:scale-95 transition">
+                    <i class="fas fa-file-alt text-xl mb-1"></i>
+                    <span id="testLabel" class="text-[10px] font-bold uppercase tracking-wide">Attach DPP / Test</span>
+                </button>
+            </div>
+
+            <div id="progressWrap" class="hidden mt-3">
                 <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
                     <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-150" style="width: 0%"></div>
                 </div>
@@ -78,7 +88,7 @@
                 </div>
             </div>
 
-            <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl mt-2 transition shadow-md shadow-blue-100 flex justify-center items-center gap-2 relative overflow-hidden">
+            <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl mt-3 transition shadow-md shadow-blue-100 flex justify-center items-center gap-2 relative overflow-hidden">
                 <i class="fas fa-upload"></i> Start Upload & Publish
             </button>
 
@@ -86,7 +96,6 @@
         </form>
     </div>
 
-    <!-- Uploaded Videos List -->
     <div class="mb-8">
         <h2 class="text-sm font-bold text-slate-800 mb-4 px-1 flex items-center gap-2">
             <i class="fas fa-list text-blue-500"></i> Your Uploaded Videos
@@ -99,8 +108,7 @@
     </div>
 </div>
 
-<!-- Delete Confirm Modal -->
-<div id="deleteModal" class="fixed inset-0 z-[999] bg-black/60 backdrop-blur-sm hidden flex items-center justify-center px-6">
+<div id="deleteModal" class="fixed inset-0 z- bg-black/60 backdrop-blur-sm hidden flex items-center justify-center px-6">
     <div class="bg-white w-full max-w-sm rounded-[20px] p-5 shadow-2xl">
         <div class="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center text-red-500 text-xl mb-3">
             <i class="fas fa-trash-alt"></i>
@@ -119,11 +127,11 @@
     import { collection, addDoc, getDoc, doc, deleteDoc, query, where, onSnapshot, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
-    // Wistia Access Token (Bearer) - api_password ab deprecated hai, naya token Wistia Account > Settings > API Access se banao
     const WISTIA_ACCESS_TOKEN = "52e25c62ca626beb4dc90b4c6207ebc45861e5de7e6569d99c6ee0fe06b6b286";
 
     let coursePhotoUrl = "";
-
+    let notesUrl = "";
+    let testUrl = "";
     let adminSchoolId = null;
     let pendingDeleteId = null;
 
@@ -141,38 +149,51 @@
     const deleteModal = document.getElementById('deleteModal');
     const deleteModalTitle = document.getElementById('deleteModalTitle');
 
+    // Smart Auto-Fill
+    document.getElementById('course').value = localStorage.getItem('ast_course') || '';
+    document.getElementById('teacherName').value = localStorage.getItem('ast_teacher') || '';
+    document.getElementById('targetClass').value = localStorage.getItem('ast_class') || '';
+    document.getElementById('subject').value = localStorage.getItem('ast_subject') || '';
+
     function formatBytes(bytes) {
         if (!bytes) return "0 MB";
         const mb = bytes / (1024 * 1024);
         return mb >= 1 ? mb.toFixed(1) + " MB" : (bytes / 1024).toFixed(0) + " KB";
     }
 
-    // Cloudinary widget for course cover photo (image upload, not raw like PDFs)
-    const coursePhotoBtn = document.getElementById('coursePhotoBtn');
-    const coursePhotoLabel = document.getElementById('coursePhotoLabel');
-    const coursePhotoPreviewWrap = document.getElementById('coursePhotoPreviewWrap');
-    const coursePhotoPreview = document.getElementById('coursePhotoPreview');
-
-    const coursePhotoWidget = cloudinary.createUploadWidget({
-        cloudName: 'dl1cddemu',
-        uploadPreset: 'upload',
-        resourceType: 'image',
-        clientAllowedFormats: ["jpg", "jpeg", "png", "webp"],
-        maxFileSize: 5000000 // 5MB
-    }, (error, result) => {
-        if (!error && result && result.event === "success") {
-            coursePhotoUrl = result.info.secure_url;
-            coursePhotoLabel.innerText = "Photo selected ✓";
-            coursePhotoPreviewWrap.classList.remove('hidden');
-            coursePhotoPreview.src = coursePhotoUrl;
+    // Cloudinary Widgets
+    const coursePhotoWidget = cloudinary.createUploadWidget({ cloudName: 'dl1cddemu', uploadPreset: 'upload', resourceType: 'image' }, (e, r) => {
+        if (!e && r && r.event === "success") {
+            coursePhotoUrl = r.info.secure_url;
+            document.getElementById('coursePhotoLabel').innerText = "Photo selected ✓";
+            document.getElementById('coursePhotoPreviewWrap').classList.remove('hidden');
+            document.getElementById('coursePhotoPreview').src = coursePhotoUrl;
         }
     });
+    document.getElementById('coursePhotoBtn').addEventListener('click', () => coursePhotoWidget.open());
 
-    coursePhotoBtn.addEventListener('click', () => coursePhotoWidget.open());
+    // 🌟 Notes & Test Upload Widgets (PDF + Image support)
+    const notesWidget = cloudinary.createUploadWidget({ cloudName: 'dl1cddemu', uploadPreset: 'upload', resourceType: 'auto' }, (e, r) => {
+        if (!e && r && r.event === "success") {
+            notesUrl = r.info.secure_url;
+            document.getElementById('notesLabel').innerText = "Notes Attached ✓";
+            document.getElementById('notesBtn').classList.replace('bg-emerald-50', 'bg-emerald-100');
+        }
+    });
+    document.getElementById('notesBtn').addEventListener('click', () => notesWidget.open());
 
-    // Jab file select ho tab naam + size dikhaye
+    const testWidget = cloudinary.createUploadWidget({ cloudName: 'dl1cddemu', uploadPreset: 'upload', resourceType: 'auto' }, (e, r) => {
+        if (!e && r && r.event === "success") {
+            testUrl = r.info.secure_url;
+            document.getElementById('testLabel').innerText = "Test Attached ✓";
+            document.getElementById('testBtn').classList.replace('bg-purple-50', 'bg-purple-100');
+        }
+    });
+    document.getElementById('testBtn').addEventListener('click', () => testWidget.open());
+
+
     fileInput.addEventListener('change', (e) => {
-        const selectedFile = e.target.files[0];
+        const selectedFile = e.target.files;
         if (selectedFile) {
             fileNameText.innerText = selectedFile.name;
             fileNameText.classList.add('text-blue-600');
@@ -184,7 +205,6 @@
         }
     });
 
-    // Check Admin Login & get School ID, then load video list
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             const adminDoc = await getDoc(doc(db, "users", user.uid));
@@ -195,84 +215,55 @@
         }
     });
 
-    // Live list of uploaded videos for this school (client-side filtered, no composite index needed)
     function loadVideoList() {
         const q = query(collection(db, "videos"), where("schoolId", "==", adminSchoolId));
+        onSnapshot(q, (snapshot) => {
+            let videos = [];
+            snapshot.forEach((d) => videos.push({ id: d.id, ...d.data() }));
 
-        onSnapshot(
-            q,
-            (snapshot) => {
-                let videos = [];
-                snapshot.forEach((d) => videos.push({ id: d.id, ...d.data() }));
-
-                if (videos.length === 0) {
-                    videoListContainer.innerHTML = `
-                        <div class="bg-white p-6 rounded-[20px] shadow-sm border border-slate-100 text-center">
-                            <p class="text-sm text-slate-400 font-medium">No videos uploaded yet.</p>
-                        </div>`;
-                    return;
-                }
-
-                videos.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
-
-                videoListContainer.innerHTML = "";
-                videos.forEach((video) => {
-                    const safeTitle = (video.title || "Untitled").replace(/'/g, "\\'").replace(/"/g, "&quot;");
-                    videoListContainer.innerHTML += `
-                        <div class="bg-white rounded-[20px] shadow-sm border border-slate-100 overflow-hidden flex items-center gap-3 p-3">
-                            <img src="https://fast.wistia.com/embed/medias/${video.wistiaId}/swatch" 
-                                 class="w-20 h-14 rounded-lg object-cover bg-slate-200 shrink-0" 
-                                 onerror="this.style.display='none'">
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center gap-1.5 mb-1 flex-wrap">
-                                    ${video.course ? `<span class="bg-purple-100 text-purple-700 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">${video.course}</span>` : ''}
-                                    <span class="bg-blue-100 text-blue-700 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">${video.subject || ''}</span>
-                                    <span class="bg-slate-100 text-slate-500 text-[9px] font-bold px-2 py-0.5 rounded-full">Class ${video.targetClass || ''}</span>
-                                </div>
-                                <h4 class="font-bold text-slate-800 text-xs truncate">${video.title || 'Untitled'}</h4>
-                                ${video.teacherName ? `<p class="text-[10px] text-slate-400 truncate"><i class="fas fa-user mr-1"></i>${video.teacherName}</p>` : ''}
-                            </div>
-                            <button onclick="openDeleteModal('${video.id}', '${safeTitle}')" class="w-9 h-9 shrink-0 bg-red-50 hover:bg-red-100 text-red-500 rounded-full flex items-center justify-center transition active:scale-90">
-                                <i class="fas fa-trash-alt text-sm"></i>
-                            </button>
-                        </div>
-                    `;
-                });
-            },
-            (error) => {
-                videoListContainer.innerHTML = `
-                    <div class="bg-red-50 p-4 rounded-[20px] border border-red-100 text-center">
-                        <p class="text-xs text-red-500 font-bold">Error loading videos: ${error.message}</p>
-                    </div>`;
+            if (videos.length === 0) {
+                videoListContainer.innerHTML = `<div class="bg-white p-6 rounded-[20px] shadow-sm border border-slate-100 text-center"><p class="text-sm text-slate-400 font-medium">No videos uploaded yet.</p></div>`;
+                return;
             }
-        );
+
+            videos.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+            videoListContainer.innerHTML = "";
+            videos.forEach((video) => {
+                const safeTitle = (video.title || "Untitled").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                videoListContainer.innerHTML += `
+                    <div class="bg-white rounded-[20px] shadow-sm border border-slate-100 overflow-hidden flex items-center gap-3 p-3">
+                        <img src="https://fast.wistia.com/embed/medias/${video.wistiaId}/swatch" class="w-20 h-14 rounded-lg object-cover bg-slate-200 shrink-0" onerror="this.style.display='none'">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-1.5 mb-1 flex-wrap">
+                                ${video.course ? `<span class="bg-purple-100 text-purple-700 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">${video.course}</span>` : ''}
+                                ${video.notesUrl ? `<span class="bg-emerald-100 text-emerald-700 text-[9px] font-bold px-2 py-0.5 rounded-full"><i class="fas fa-file-pdf"></i> Notes</span>` : ''}
+                                ${video.testUrl ? `<span class="bg-purple-100 text-purple-700 text-[9px] font-bold px-2 py-0.5 rounded-full"><i class="fas fa-file-alt"></i> DPP</span>` : ''}
+                            </div>
+                            <h4 class="font-bold text-slate-800 text-xs truncate">${video.title || 'Untitled'}</h4>
+                        </div>
+                        <button onclick="openDeleteModal('${video.id}', '${safeTitle}')" class="w-9 h-9 shrink-0 bg-red-50 hover:bg-red-100 text-red-500 rounded-full flex items-center justify-center transition active:scale-90"><i class="fas fa-trash-alt text-sm"></i></button>
+                    </div>`;
+            });
+        });
     }
 
-    // Delete modal logic
     window.openDeleteModal = function (videoId, title) {
         pendingDeleteId = videoId;
-        deleteModalTitle.innerText = `"${title}" will be permanently removed from the list.`;
+        deleteModalTitle.innerText = `"${title}" will be permanently removed.`;
         deleteModal.classList.remove('hidden');
         deleteModal.classList.add('flex');
     };
-
     window.closeDeleteModal = function () {
         pendingDeleteId = null;
         deleteModal.classList.add('hidden');
         deleteModal.classList.remove('flex');
     };
-
     window.confirmDelete = async function () {
         if (!pendingDeleteId) return;
-        try {
-            await deleteDoc(doc(db, "videos", pendingDeleteId));
-        } catch (err) {
-            alert("Failed to delete: " + err.message);
-        }
+        try { await deleteDoc(doc(db, "videos", pendingDeleteId)); } catch (err) { alert("Failed: " + err.message); }
         closeDeleteModal();
     };
 
-    // XHR based upload so we get real progress events (fetch can't report upload progress)
     function uploadWithProgress(formData, totalBytes) {
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
@@ -287,30 +278,17 @@
                     progressBytes.innerText = `${formatBytes(event.loaded)} / ${formatBytes(event.total)}`;
                 }
             };
-
             xhr.onload = () => {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    try {
-                        resolve(JSON.parse(xhr.responseText));
-                    } catch (err) {
-                        reject(new Error("Invalid response from Wistia"));
-                    }
-                } else if (xhr.status === 401 || xhr.status === 403) {
-                    reject(new Error("Auth failed (401/403) - check your Wistia Access Token / permissions"));
-                } else {
-                    reject(new Error("Wistia Error (" + xhr.status + "): " + xhr.responseText));
-                }
+                if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText));
+                else reject(new Error("Wistia Error: " + xhr.responseText));
             };
-
-            xhr.onerror = () => reject(new Error("Network/CORS error - request never reached Wistia or was blocked"));
-
+            xhr.onerror = () => reject(new Error("Network error"));
             xhr.send(formData);
         });
     }
 
-    // Upload & Submit Logic
     form.addEventListener('submit', async () => {
-        const file = fileInput.files[0];
+        const file = fileInput.files;
         if (!file) return alert("Please select a video file!");
 
         const course = document.getElementById('course').value.trim();
@@ -319,17 +297,18 @@
         const targetClass = document.getElementById('targetClass').value.trim();
         const subject = document.getElementById('subject').value.trim();
 
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading to Wistia...';
-        uploadStatus.classList.remove('hidden');
-        uploadStatus.innerText = "Please wait, uploading video... (Do not close this app)";
-        uploadStatus.classList.remove('text-emerald-600', 'text-red-600');
-        uploadStatus.classList.add('text-blue-600');
+        localStorage.setItem('ast_course', course);
+        localStorage.setItem('ast_teacher', teacherName);
+        localStorage.setItem('ast_class', targetClass);
+        localStorage.setItem('ast_subject', subject);
 
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+        uploadStatus.classList.remove('hidden', 'text-emerald-600', 'text-red-600');
+        uploadStatus.classList.add('text-blue-600');
+        uploadStatus.innerText = "Please wait, uploading video...";
         progressWrap.classList.remove('hidden');
         progressBar.style.width = "0%";
-        progressPercent.innerText = "0%";
-        progressBytes.innerText = `0 MB / ${formatBytes(file.size)}`;
 
         try {
             const formData = new FormData();
@@ -339,10 +318,6 @@
             const wistiaData = await uploadWithProgress(formData, file.size);
             const generatedWistiaId = wistiaData.hashed_id;
 
-            uploadStatus.innerText = "Saving to Firebase Database...";
-
-            // Agar course photo select ki gayi hai, to usse courseMeta collection mein save karo
-            // (ek course ki photo sirf ek baar set hoti hai, har video ke document mein nahi)
             if (coursePhotoUrl && course) {
                 const courseMetaId = `${adminSchoolId}_${course}`.replace(/\s+/g, '_').toLowerCase();
                 await setDoc(doc(db, "courseMeta", courseMetaId), {
@@ -352,7 +327,6 @@
                 }, { merge: true });
             }
 
-            // Firebase me entry save karna
             await addDoc(collection(db, "videos"), {
                 schoolId: adminSchoolId,
                 course: course,
@@ -361,22 +335,29 @@
                 subject: subject,
                 title: title,
                 wistiaId: generatedWistiaId,
+                notesUrl: notesUrl, // 🌟 Save Notes URL
+                testUrl: testUrl,   // 🌟 Save Test URL
                 createdAt: serverTimestamp()
             });
 
-            // Success Hone par Form Reset
-            form.reset();
+            document.getElementById('title').value = '';
+            fileInput.value = '';
             fileNameText.innerText = "Tap to select video (.mp4)";
             fileNameText.classList.remove('text-blue-600');
             fileSizeText.innerText = "";
-            coursePhotoUrl = "";
-            coursePhotoLabel.innerText = "Upload Course Cover Photo";
-            coursePhotoPreviewWrap.classList.add('hidden');
+            
+            // 🌟 Reset File buttons for next video
+            notesUrl = "";
+            testUrl = "";
+            document.getElementById('notesLabel').innerText = "Attach Notes";
+            document.getElementById('testLabel').innerText = "Attach DPP / Test";
+            document.getElementById('notesBtn').classList.replace('bg-emerald-100', 'bg-emerald-50');
+            document.getElementById('testBtn').classList.replace('bg-purple-100', 'bg-purple-50');
+
             progressBar.style.width = "100%";
             progressPercent.innerText = "100%";
             uploadStatus.innerText = "✅ Video published successfully!";
-            uploadStatus.classList.remove('text-blue-600');
-            uploadStatus.classList.add('text-emerald-600');
+            uploadStatus.classList.replace('text-blue-600', 'text-emerald-600');
 
             setTimeout(() => {
                 uploadStatus.classList.add('hidden');
@@ -385,8 +366,7 @@
 
         } catch (error) {
             uploadStatus.innerText = "❌ Failed: " + error.message;
-            uploadStatus.classList.remove('text-blue-600');
-            uploadStatus.classList.add('text-red-600');
+            uploadStatus.classList.replace('text-blue-600', 'text-red-600');
             alert(error.message);
         }
 
