@@ -81,13 +81,38 @@
             <div class="wistia_embed wistia_async_${wistiaId} seo=false videoFoam=false autoPlay=true playsinline=true" style="height:100%;width:100%;position:relative;">
             </div>
         `;
+
+        // Jab Wistia player fullscreen mein jaaye, to landscape orientation lock try karo
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     };
+
+    function handleFullscreenChange() {
+        const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+        if (isFullscreen) {
+            // Mobile browsers (Chrome Android) par landscape lock supported hota hai
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(() => {
+                    // Kuch browsers (jaise iOS Safari) lock support nahi karte - silently ignore
+                });
+            }
+        } else {
+            if (screen.orientation && screen.orientation.unlock) {
+                try { screen.orientation.unlock(); } catch (e) {}
+            }
+        }
+    }
 
     window.closeVideo = function () {
         videoModal.classList.add('hidden');
         videoModal.classList.remove('flex');
         modalPlayerContainer.innerHTML = "";
         document.body.style.overflow = '';
+        document.removeEventListener('fullscreenchange', handleFullscreenChange);
+        document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+        if (screen.orientation && screen.orientation.unlock) {
+            try { screen.orientation.unlock(); } catch (e) {}
+        }
     };
 
     // Tap outside the card closes the modal
