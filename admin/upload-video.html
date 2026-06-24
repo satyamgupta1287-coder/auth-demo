@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Batches & Videos - Admin</title>
+    <title>Manage Batches - Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -17,7 +17,7 @@
         <i class="fas fa-arrow-left"></i>
     </button>
     <div class="flex-1 min-w-0">
-        <h1 class="text-base font-bold truncate" id="headerTitle">Manage Courses</h1>
+        <h1 class="text-base font-bold truncate" id="headerTitle">Manage Batches (Pro)</h1>
         <p class="text-[10px] text-blue-200 font-medium truncate uppercase tracking-wider" id="headerPath">Admin Area</p>
     </div>
 </div>
@@ -32,6 +32,10 @@
         <div id="courseList" class="space-y-3">
             <div class="text-center p-5"><i class="fas fa-spinner fa-spin text-slate-400"></i></div>
         </div>
+        
+        <button onclick="clearAppGarbage()" class="w-full mt-6 py-3 text-xs font-bold text-red-500 bg-red-50 rounded-xl border border-red-100 active:scale-95 transition">
+            <i class="fas fa-broom mr-1"></i> Clear 'Undefined' Error Cache
+        </button>
     </div>
 
     <div id="view-subjects" class="hidden space-y-4">
@@ -172,14 +176,22 @@
     const headerTitle = document.getElementById('headerTitle');
     const headerPath = document.getElementById('headerPath');
 
-    // 🌟 GARBAGE CLEANER: memory me se 'undefined' ko completely block karna
+    // 🌟 MANUAL CACHE CLEAR FUNCTION
+    window.clearAppGarbage = function() {
+        localStorage.removeItem('ast_teacher');
+        localStorage.removeItem('ast_class');
+        localStorage.removeItem('ast_course');
+        localStorage.removeItem('ast_subject');
+        alert("Cache Cleared Successfully! Browser memory is now fresh.");
+        window.location.reload();
+    };
+
+    // AutoFill Logic (Strict 'undefined' blocker)
     function getSafeStorage(key) {
         let val = localStorage.getItem(key);
-        if (!val || val === 'undefined' || val === 'null' || val.trim() === '') return '';
+        if (!val || val.toLowerCase() === 'undefined' || val.toLowerCase() === 'null') return '';
         return val.trim();
     }
-    
-    // Page load hone par safe data bharna
     document.getElementById('teacherName').value = getSafeStorage('ast_teacher');
     document.getElementById('targetClass').value = getSafeStorage('ast_class');
 
@@ -251,20 +263,23 @@
             allVideos = [];
             snap.forEach(d => {
                 const data = d.data();
-                // 🌟 FIREBASE CLEANER: Agar firebase me purana 'undefined' pada hai, to use UI me mat dikhao
-                const cleanData = {
+                // FIREBASE CLEANER: Purana 'undefined' filter
+                const c = data.course || '';
+                const s = data.subject || '';
+                if(c.toLowerCase() === 'undefined' || s.toLowerCase() === 'undefined') return; // Skip bad data
+                
+                allVideos.push({
                     id: d.id,
-                    course: data.course === 'undefined' ? '' : data.course,
-                    subject: data.subject === 'undefined' ? '' : data.subject,
-                    targetClass: data.targetClass === 'undefined' ? '' : data.targetClass,
-                    teacherName: data.teacherName === 'undefined' ? '' : data.teacherName,
-                    title: data.title === 'undefined' ? 'Untitled' : data.title,
+                    course: c,
+                    subject: s,
+                    targetClass: (!data.targetClass || data.targetClass.toLowerCase() === 'undefined') ? '' : data.targetClass,
+                    teacherName: (!data.teacherName || data.teacherName.toLowerCase() === 'undefined') ? '' : data.teacherName,
+                    title: (!data.title || data.title.toLowerCase() === 'undefined') ? 'Untitled' : data.title,
                     wistiaId: data.wistiaId,
                     notesUrl: data.notesUrl,
                     testUrl: data.testUrl,
                     createdAt: data.createdAt
-                };
-                allVideos.push(cleanData);
+                });
             });
             allVideos.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
             updateUI();
@@ -277,7 +292,7 @@
         document.getElementById('view-upload').classList.add('hidden');
 
         if (currentStep === 1) {
-            headerTitle.innerText = "Manage Batches";
+            headerTitle.innerText = "Manage Batches (Pro)";
             headerPath.innerText = "Admin / Courses";
             document.getElementById('view-courses').classList.remove('hidden');
             renderCourses();
@@ -390,7 +405,6 @@
         });
     }
 
-    // MODALS LOGIC
     window.openCourseModal = () => { document.getElementById('courseModal').classList.remove('hidden'); document.getElementById('courseModal').classList.add('flex'); };
     window.closeCourseModal = () => { document.getElementById('courseModal').classList.add('hidden'); document.getElementById('courseModal').classList.remove('flex'); };
     window.saveNewCourse = async () => {
@@ -433,7 +447,7 @@
                     document.getElementById('progressBytes').innerText = `${formatBytes(e.loaded)} / ${formatBytes(e.total)}`;
                 }
             };
-            xhr.onload = () => { if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText)); else reject(new Error("Wistia Error: Check API Key or Limits")); };
+            xhr.onload = () => { if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText)); else reject(new Error("Wistia Error: Check API limits")); };
             xhr.onerror = () => reject(new Error("Network connection error"));
             xhr.send(formData);
         });
@@ -447,7 +461,6 @@
         let teacherName = document.getElementById('teacherName').value.trim();
         let targetClass = document.getElementById('targetClass').value.trim();
 
-        // Agar kisi ne jaan-bujhkar form me 'undefined' type kar diya, to block karo
         if(title.toLowerCase() === 'undefined') title = 'Untitled';
         if(teacherName.toLowerCase() === 'undefined') teacherName = '';
         if(targetClass.toLowerCase() === 'undefined') targetClass = '';
@@ -472,7 +485,7 @@
             formData.append('name', title);
 
             const wistiaData = await uploadWithProgress(formData, file.size);
-            if (!wistiaData || !wistiaData.hashed_id) throw new Error("Video ID not received from Wistia server.");
+            if (!wistiaData || !wistiaData.hashed_id) throw new Error("Video ID not received from Wistia.");
             
             await addDoc(collection(db, "videos"), {
                 schoolId: adminSchoolId || "UNKNOWN",
@@ -487,7 +500,6 @@
                 createdAt: serverTimestamp()
             });
 
-            // Input fields wapas khali karo
             document.getElementById('title').value = '';
             fileInput.value = '';
             document.getElementById('fileNameText').innerText = "Tap to select video (.mp4)";
