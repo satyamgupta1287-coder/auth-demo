@@ -228,7 +228,7 @@
 
     const fileInput = document.getElementById('videoFile');
     fileInput.addEventListener('change', (e) => {
-        const file = e.target.files;
+        const file = e.target.files[0];
         if (file) {
             document.getElementById('fileNameText').innerText = file.name;
             document.getElementById('fileNameText').classList.add('text-blue-600');
@@ -454,7 +454,7 @@
     }
 
     document.getElementById('videoForm').addEventListener('submit', async () => {
-        const file = fileInput.files;
+        const file = fileInput.files[0];
         if (!file) return alert("Select video file!");
 
         let title = document.getElementById('title').value.trim() || "Untitled";
