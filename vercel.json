@@ -1,0 +1,14 @@
+{
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/home",
+      "destination": "/dashboard.html"
+    },
+    {
+      "source": "/admin-panel",
+      "destination": "/admin/upload-video.html"
+    }
+  ]
+}
